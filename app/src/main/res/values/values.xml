@@ -22,6 +22,8 @@
     <dimen name="side_panel_hairline_inset">339dp</dimen>
     <dimen name="side_panel_width">340dp</dimen>
     <dimen name="card_radius">10dp</dimen>
+    <!-- Between the quick settings tiles, both ways. -->
+    <dimen name="tile_gap">8dp</dimen>
     <dimen name="focus_z">12dp</dimen>
     <integer name="grid_columns">5</integer>
 

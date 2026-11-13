@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Group label between the rows of the main settings page. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="14dp"
+    android:layout_marginTop="14dp"
+    android:layout_marginBottom="6dp"
+    android:singleLine="true"
+    android:textAllCaps="true"
+    android:textColor="@color/text_dim"
+    android:textSize="11sp" />

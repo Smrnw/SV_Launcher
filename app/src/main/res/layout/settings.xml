@@ -39,7 +39,9 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
+                <!-- The clock on the main page, the app name on the others. -->
                 <TextView
+                    android:id="@+id/settings_brand"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:singleLine="true"
@@ -58,6 +60,19 @@
                     android:textColor="@color/text_dim"
                     android:textSize="11sp" />
             </LinearLayout>
+
+            <!-- All of the TV's own settings, on the main page only. -->
+            <ImageView
+                android:id="@+id/settings_system"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/round_focus"
+                android:clickable="true"
+                android:contentDescription="@string/system_title"
+                android:focusable="true"
+                android:padding="9dp"
+                android:src="@drawable/ic_settings"
+                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

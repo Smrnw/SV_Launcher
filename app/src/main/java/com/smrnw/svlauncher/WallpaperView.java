@@ -30,6 +30,7 @@ public final class WallpaperView extends View {
     private Bitmap current;
     private Bitmap previous;
     private float fade = 1f;
+    private int dim;
 
     public WallpaperView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -89,11 +90,32 @@ public final class WallpaperView extends View {
         if (b != null && !b.isRecycled()) b.recycle();
     }
 
+    /** Extra darkening of the wallpaper in percent, on top of the readability gradient. */
+    void setDim(int percent) {
+        int value = Math.max(0, Math.min(100, percent)) * 255 / 100;
+        if (value == dim) return;
+        dim = value;
+        buildScrim(getHeight());
+        invalidate();
+    }
+
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-        scrim.setShader(new LinearGradient(0, 0, 0, h,
-                new int[]{0x4D000000, 0x14000000, 0xBF000000},
+        buildScrim(h);
+    }
+
+    // The darkening is baked into the gradient instead of being one more
+    // full-screen layer on top of it.
+    private void buildScrim(int height) {
+        if (height <= 0) return;
+        scrim.setShader(new LinearGradient(0, 0, 0, height,
+                new int[]{shade(0x4D), shade(0x14), shade(0xBF)},
                 new float[]{0f, 0.38f, 1f}, Shader.TileMode.CLAMP));
+    }
+
+    /** Black with the opacity of two stacked layers: the gradient's own and the dimming. */
+    private int shade(int alpha) {
+        return (255 - (255 - alpha) * (255 - dim) / 255) << 24;
     }
 
     @Override

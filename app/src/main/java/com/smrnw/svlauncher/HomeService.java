@@ -2,6 +2,7 @@ package com.smrnw.svlauncher;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
+import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -27,7 +28,8 @@ import java.util.List;
  *    "go home" action), SV Launcher is opened on top of it.
  * 3. After the TV starts, the system shows its stock launcher before it binds this
  *    service, so the window change above happens unseen. The first time the
- *    service connects after a boot, it opens SV Launcher itself.
+ *    service connects after a boot, it opens SV Launcher itself. The same goes for
+ *    the reconnect after SV Launcher has updated itself.
  *
  * The service never inspects window content. It subscribes to window changes of the
  * stock launcher packages only, so it stays asleep while other apps are in use.
@@ -43,6 +45,9 @@ public final class HomeService extends AccessibilityService {
 
     private static final String PREFS = "home_service";
     private static final String KEY_HANDLED_BOOT = "handled_boot";
+    private static final String KEY_SELF_UPDATE = "self_update";
+    /** A self-update older than this was never finished; the mark is just dropped. */
+    private static final long SELF_UPDATE_LIMIT_MS = 10 * 60 * 1000L;
 
     /** "package/class" of every other home screen activity on the device. */
     private final HashSet<String> stockHomes = new HashSet<>();
@@ -86,7 +91,37 @@ public final class HomeService extends AccessibilityService {
             info.packageNames = stockPackages.toArray(new String[0]);
             setServiceInfo(info);
         }
-        if (firstConnectSinceBoot()) goHome();
+        // Both checks run: each one also clears its own mark.
+        boolean boot = firstConnectSinceBoot();
+        boolean update = connectAfterSelfUpdate();
+        if (boot || update) goHome();
+    }
+
+    /**
+     * Called right before SV Launcher hands an update of itself to the installer.
+     * The installer stops the app, the stock launcher takes the screen before this
+     * service is bound again, and nothing changes on screen afterwards that the
+     * service could react to. So the service brings SV Launcher back by itself.
+     */
+    @SuppressLint("ApplySharedPref")
+    static void expectSelfUpdate(Context context, boolean expect) {
+        SharedPreferences.Editor editor = context.getSharedPreferences(PREFS, MODE_PRIVATE).edit();
+        if (expect) {
+            editor.putLong(KEY_SELF_UPDATE, System.currentTimeMillis());
+        } else {
+            editor.remove(KEY_SELF_UPDATE);
+        }
+        // Written at once: the installer stops this process right after.
+        editor.commit();
+    }
+
+    private boolean connectAfterSelfUpdate() {
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        long started = prefs.getLong(KEY_SELF_UPDATE, 0L);
+        if (started == 0L) return false;
+        prefs.edit().remove(KEY_SELF_UPDATE).apply();
+        long age = System.currentTimeMillis() - started;
+        return age >= 0 && age < SELF_UPDATE_LIMIT_MS;
     }
 
     /**

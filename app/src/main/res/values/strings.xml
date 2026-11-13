@@ -5,6 +5,16 @@
     <!-- Home screen -->
     <string name="favorites_title">Favorites</string>
     <string name="favorites_empty">Hold OK on an app and choose “Pin to favorites” to add it here</string>
+    <string name="section_recent">Recent</string>
+    <string name="section_all">All apps</string>
+    <string name="menu_forget_recent">Remove from recent</string>
+    <string name="menu_rename">Rename</string>
+    <string name="rename_reset">Reset</string>
+    <string name="menu_uninstall">Uninstall</string>
+    <string name="junk_title">Hide service apps?</string>
+    <string name="junk_message">Found apps without a proper name (%1$d): %2$s. You can bring them back in launcher settings.</string>
+    <string name="junk_hide">Hide</string>
+    <string name="junk_keep">Keep</string>
     <string name="menu_pin">Pin to favorites</string>
     <string name="menu_unpin">Unpin</string>
     <string name="menu_move_left">Move left</string>
@@ -53,7 +63,6 @@
 
     <!-- Settings. Titles and states must fit on one line of the side panel. -->
     <string name="settings">Launcher settings</string>
-    <string name="settings_page">Settings</string>
     <string name="inputs_title">Signal sources</string>
     <string name="inputs_unavailable">This TV does not provide its inputs to apps</string>
     <string name="input_title_tuner">TV</string>
@@ -94,6 +103,19 @@
     <string name="theme_empty">The cloud collection has no themes yet</string>
     <string name="own_add_title">Add my wallpapers</string>
     <string name="own_count">Images: %d</string>
+    <string name="interval_title">Wallpaper change</string>
+    <string name="interval_on_return">When the screen opens</string>
+    <string name="interval_minutes">Every %d min</string>
+    <string name="dim_title">Wallpaper dimming</string>
+    <string-array name="dim_levels">
+        <item>None</item>
+        <item>Light</item>
+        <item>Medium</item>
+        <item>Strong</item>
+    </string-array>
+    <string name="recent_title">Recent apps</string>
+    <string name="recent_on">Shown</string>
+    <string name="recent_off">Not shown</string>
     <string name="own_added">Added: %d. Own wallpapers are now on</string>
     <string name="own_failed">Nothing was added. Supported formats: JPEG, PNG, WebP</string>
     <string name="own_clear_title">Remove my wallpapers</string>
@@ -121,8 +143,52 @@
     <string name="setup_again_title">Setup wizard</string>
     <string name="setup_again_summary">Run it again</string>
     <string name="system_title">System settings</string>
-    <string name="system_summary">TV settings</string>
-    <string name="version">Version %s</string>
+
+    <!-- Quick access on the main settings page. Tiles are narrow: two short lines at most. -->
+    <string name="qs_wifi">Wi‑Fi</string>
+    <string name="qs_bluetooth">Bluetooth and remotes</string>
+    <string name="qs_picture">Picture</string>
+    <string name="qs_sound">Sound</string>
+    <string name="qs_accessibility">Accessibility</string>
+    <string name="qs_storage">Storage</string>
+    <string name="qs_connected">Connected</string>
+    <string name="qs_ethernet">Ethernet</string>
+    <string name="dev_title">Developer options</string>
+    <string name="dev_on">On</string>
+    <string name="dev_hidden">Hidden</string>
+    <string name="dev_enabled">Developer options are on</string>
+    <string name="dev_about">About</string>
+    <string name="dev_manual">The firmware has closed developer options to apps. Try to switch them on by hand: About → press Build seven times.\n\nIf that is blocked too but ADB works, give the launcher the permission and it switches the mode on by itself:\n\nadb shell pm grant com.smrnw.svlauncher android.permission.WRITE_SECURE_SETTINGS</string>
+    <string name="section_launcher">Launcher</string>
+
+    <!-- Updates -->
+    <string name="update_current">You have the latest version</string>
+    <string name="update_unknown">Press to check for updates</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_available">Version %s is available</string>
+    <string name="update_downloading">Downloading… %d%%</string>
+    <string name="update_check_failed">Could not check for updates. Check the internet connection</string>
+    <string name="update_latest_toast">You have the latest version</string>
+    <string name="update_dialog_title">SV Launcher %s</string>
+    <string name="update_dialog_text">A new version is available. It is downloaded from GitHub, checked and installed over this one: settings, favorites and wallpapers stay.</string>
+    <string name="update_install">Install</string>
+    <string name="update_later">Later</string>
+    <string name="update_auto_title">Automatic check</string>
+    <string name="update_auto_on">Once a day</string>
+    <string name="update_auto_off">Off</string>
+    <string name="update_permission_title">Allow installing</string>
+    <string name="update_permission_text">To update SV Launcher from here, allow it to install apps. A system screen opens: turn the switch on and go back, the update then continues by itself.</string>
+    <string name="update_permission_open">Open</string>
+    <string name="update_permission_manual">Allow SV Launcher to install apps: Settings → Apps → Special app access → Install unknown apps</string>
+    <string name="update_permission_denied">The permission was not given. If SV Launcher is not listed on that screen, this TV does not let you switch it on by hand. Update the launcher with Unbrake TV, or give the permission over ADB:
+
+adb shell appops set com.smrnw.svlauncher REQUEST_INSTALL_PACKAGES allow</string>
+    <string name="update_started">Downloading the update…</string>
+    <string name="update_error_network">Could not download the update. Check the internet connection</string>
+    <string name="update_error_file">The downloaded file is damaged or does not fit</string>
+    <string name="update_error_older">The downloaded version is not newer than the installed one</string>
+    <string name="update_error_signature">The update is signed with a different key and will not be installed</string>
+    <string name="update_error_install">The system did not install the update</string>
 
     <string name="a11y_description">Opens SV Launcher instead of the stock home screen when you press Home. The service only reacts to the Home button and to the stock launcher appearing on screen. It does not read screen content and does not collect any data.</string>
 </resources>

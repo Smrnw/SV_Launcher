@@ -3,6 +3,16 @@
     <!-- Домашний экран -->
     <string name="favorites_title">Избранное</string>
     <string name="favorites_empty">Удерживайте OK на приложении и выберите «Закрепить в избранном», чтобы добавить его сюда</string>
+    <string name="section_recent">Недавние</string>
+    <string name="section_all">Все приложения</string>
+    <string name="menu_forget_recent">Убрать из недавних</string>
+    <string name="menu_rename">Переименовать</string>
+    <string name="rename_reset">Сбросить</string>
+    <string name="menu_uninstall">Удалить</string>
+    <string name="junk_title">Скрыть служебные приложения?</string>
+    <string name="junk_message">Найдены приложения без нормального названия (%1$d): %2$s. Вернуть их можно в настройках лаунчера.</string>
+    <string name="junk_hide">Скрыть</string>
+    <string name="junk_keep">Оставить</string>
     <string name="menu_pin">Закрепить в избранном</string>
     <string name="menu_unpin">Открепить</string>
     <string name="menu_move_left">Сдвинуть влево</string>
@@ -49,7 +59,6 @@
 
     <!-- Настройки. Названия и состояния должны умещаться в одну строку боковой панели. -->
     <string name="settings">Настройки лаунчера</string>
-    <string name="settings_page">Настройки</string>
     <string name="inputs_title">Источники сигнала</string>
     <string name="inputs_unavailable">Телевизор не предоставляет список входов приложениям</string>
     <string name="input_title_tuner">TV</string>
@@ -88,6 +97,19 @@
     <string name="theme_loading">Загружаю темы…</string>
     <string name="theme_failed">Не удалось получить темы. Проверьте подключение к интернету</string>
     <string name="theme_empty">В облачной подборке пока нет тем</string>
+    <string name="interval_title">Смена обоев</string>
+    <string name="interval_on_return">При открытии экрана</string>
+    <string name="interval_minutes">Каждые %d мин</string>
+    <string name="dim_title">Затемнение обоев</string>
+    <string-array name="dim_levels">
+        <item>Нет</item>
+        <item>Слабое</item>
+        <item>Среднее</item>
+        <item>Сильное</item>
+    </string-array>
+    <string name="recent_title">Недавние приложения</string>
+    <string name="recent_on">Показываются</string>
+    <string name="recent_off">Не показываются</string>
     <string name="own_add_title">Добавить свои обои</string>
     <string name="own_count">Изображений: %d</string>
     <string name="own_added">Добавлено: %d. Свои обои включены</string>
@@ -117,8 +139,52 @@
     <string name="setup_again_title">Начальная настройка</string>
     <string name="setup_again_summary">Пройти заново</string>
     <string name="system_title">Настройки системы</string>
-    <string name="system_summary">Настройки телевизора</string>
-    <string name="version">Версия %s</string>
+
+    <!-- Быстрый доступ на главной странице настроек. Плитки узкие: до двух коротких строк. -->
+    <string name="qs_wifi">Wi‑Fi</string>
+    <string name="qs_bluetooth">Bluetooth и пульты</string>
+    <string name="qs_picture">Изображение</string>
+    <string name="qs_sound">Звук</string>
+    <string name="qs_accessibility">Спец. возможности</string>
+    <string name="qs_storage">Память</string>
+    <string name="qs_connected">Подключено</string>
+    <string name="qs_ethernet">Ethernet</string>
+    <string name="dev_title">Режим разработчика</string>
+    <string name="dev_on">Включён</string>
+    <string name="dev_hidden">Скрыт</string>
+    <string name="dev_enabled">Режим разработчика включён</string>
+    <string name="dev_about">Об устройстве</string>
+    <string name="dev_manual">Прошивка закрыла меню разработчика для приложений. Попробуйте включить его вручную: «Об устройстве» → семь раз нажмите на «Сборку».\n\nЕсли и это заблокировано, а ADB доступен, выдайте лаунчеру разрешение, и он включит режим сам:\n\nadb shell pm grant com.smrnw.svlauncher android.permission.WRITE_SECURE_SETTINGS</string>
+    <string name="section_launcher">Лаунчер</string>
+
+    <!-- Обновления -->
+    <string name="update_current">У вас установлена актуальная версия</string>
+    <string name="update_unknown">Нажмите, чтобы проверить обновления</string>
+    <string name="update_checking">Проверяю…</string>
+    <string name="update_available">Доступна версия %s</string>
+    <string name="update_downloading">Загрузка… %d%%</string>
+    <string name="update_check_failed">Не удалось проверить обновления. Проверьте подключение к интернету</string>
+    <string name="update_latest_toast">Установлена последняя версия</string>
+    <string name="update_dialog_title">SV Launcher %s</string>
+    <string name="update_dialog_text">Доступна новая версия. Она загрузится с GitHub, проверится и будет установлена поверх текущей: настройки, избранное и обои сохранятся.</string>
+    <string name="update_install">Установить</string>
+    <string name="update_later">Позже</string>
+    <string name="update_auto_title">Автопроверка</string>
+    <string name="update_auto_on">Раз в день</string>
+    <string name="update_auto_off">Выключена</string>
+    <string name="update_permission_title">Разрешите установку</string>
+    <string name="update_permission_text">Чтобы обновлять SV Launcher прямо отсюда, разрешите ему устанавливать приложения. Откроется системный экран: включите переключатель и вернитесь назад, установка продолжится сама.</string>
+    <string name="update_permission_open">Открыть</string>
+    <string name="update_permission_manual">Разрешите SV Launcher установку приложений: Настройки → Приложения → Специальный доступ → Установка неизвестных приложений</string>
+    <string name="update_permission_denied">Разрешение не выдано. Если SV Launcher нет в списке на этом экране, телевизор не даёт включить его вручную. Обновите лаунчер через Unbrake TV или выдайте разрешение по ADB:
+
+adb shell appops set com.smrnw.svlauncher REQUEST_INSTALL_PACKAGES allow</string>
+    <string name="update_started">Загружаю обновление…</string>
+    <string name="update_error_network">Не удалось загрузить обновление. Проверьте подключение к интернету</string>
+    <string name="update_error_file">Загруженный файл повреждён или не подходит</string>
+    <string name="update_error_older">Загруженная версия не новее установленной</string>
+    <string name="update_error_signature">Обновление подписано другим ключом и не будет установлено</string>
+    <string name="update_error_install">Система не установила обновление</string>
 
     <string name="a11y_description">Открывает SV Launcher вместо стандартного рабочего стола по нажатию кнопки «Домой». Служба реагирует только на кнопку «Домой» и на появление стандартного лаунчера на экране. Она не читает содержимое экрана и не собирает никаких данных.</string>
 </resources>

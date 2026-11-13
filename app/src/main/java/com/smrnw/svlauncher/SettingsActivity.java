@@ -8,16 +8,20 @@ import android.content.ContentUris;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.text.TextUtils;
+import android.text.format.DateFormat;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -25,7 +29,9 @@ import java.io.File;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
+import java.util.Locale;
 
 /**
  * Launcher settings as a side panel on the right, the way TV system menus look:
@@ -55,9 +61,30 @@ public final class SettingsActivity extends Activity {
     private static final int[] SOURCE_NAMES = {R.string.source_builtin, R.string.source_cloud,
             R.string.source_own, R.string.source_off};
 
+    /** The clock in the header moves on while the panel is open. */
+    private static final long CLOCK_TICK_MS = 15 * 1000L;
+
     private ViewGroup rows;
+    private TextView brand;
     private TextView title;
+    private View systemButton;
     private int page = PAGE_MAIN;
+    /** Focusable tiles and rows of the page in screen order; focus is restored by index. */
+    private final ArrayList<View> focusables = new ArrayList<>();
+    /** Where the focus was on the main page before a topic was opened. */
+    private int mainFocus;
+    /** The user went to allow app installs; the update continues on return. */
+    private boolean installAfterPermission;
+    /** State line of the update row, rewritten while the download runs. */
+    private TextView updateSummary;
+
+    private final Runnable clockTick = new Runnable() {
+        @Override
+        public void run() {
+            if (page == PAGE_MAIN) showClock();
+            rows.postDelayed(this, CLOCK_TICK_MS);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,7 +95,10 @@ public final class SettingsActivity extends Activity {
         getWindow().setGravity(Gravity.END);
         setContentView(R.layout.settings);
         rows = findViewById(R.id.rows);
+        brand = findViewById(R.id.settings_brand);
         title = findViewById(R.id.settings_title);
+        systemButton = findViewById(R.id.settings_system);
+        systemButton.setOnClickListener(v -> open(new Intent(Settings.ACTION_SETTINGS)));
         if (savedInstanceState != null) page = savedInstanceState.getInt(STATE_PAGE, PAGE_MAIN);
     }
 
@@ -77,6 +107,27 @@ public final class SettingsActivity extends Activity {
         super.onResume();
         // Also picks up what changed in system screens opened from here.
         show(page, focusedRow());
+        rows.postDelayed(clockTick, CLOCK_TICK_MS);
+        if (installAfterPermission) {
+            installAfterPermission = false;
+            if (Updater.canInstall(this)) {
+                startUpdate();
+            } else {
+                // Some TVs (Xiaomi among them) show an empty list on that screen,
+                // so the user has no switch to turn on. Say what else works.
+                new AlertDialog.Builder(this)
+                        .setTitle(R.string.update_permission_title)
+                        .setMessage(R.string.update_permission_denied)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
+            }
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        rows.removeCallbacks(clockTick);
     }
 
     @Override
@@ -91,7 +142,7 @@ public final class SettingsActivity extends Activity {
             super.onBackPressed();
         } else {
             // Back to the topic list, with the focus on the topic just left.
-            show(PAGE_MAIN, page - 1);
+            show(PAGE_MAIN, mainFocus);
         }
     }
 
@@ -107,7 +158,12 @@ public final class SettingsActivity extends Activity {
     /** Rebuilds the page; {@code focus} is the index of the row to focus. */
     private void show(int newPage, int focus) {
         page = newPage;
-        rows.removeViews(1, rows.getChildCount() - 1); // index 0 is the title
+        rows.removeViews(1, rows.getChildCount() - 1); // index 0 is the header
+        focusables.clear();
+        updateSummary = null;
+        boolean main = page == PAGE_MAIN;
+        systemButton.setVisibility(main ? View.VISIBLE : View.GONE);
+        if (!main) brand.setText(R.string.app_name);
         switch (page) {
             case PAGE_DEFAULT:
                 buildDefault();
@@ -127,33 +183,37 @@ public final class SettingsActivity extends Activity {
         }
         // Some TVs do not focus anything in a new window by themselves; without a
         // highlighted row the remote would seem dead.
-        int count = rows.getChildCount() - 1;
-        if (count > 0) {
-            View row = rows.getChildAt(1 + Math.max(0, Math.min(focus, count - 1)));
-            if (row.isFocusable()) row.requestFocus();
+        if (!focusables.isEmpty()) {
+            focusables.get(Math.max(0, Math.min(focus, focusables.size() - 1))).requestFocus();
         }
     }
 
+    /** Index of the focused tile or row; the gear in the header counts as the first. */
     private int focusedRow() {
-        View focused = getCurrentFocus();
-        int index = focused != null ? rows.indexOfChild(focused) : -1;
-        return index > 0 ? index - 1 : 0;
+        int index = focusables.indexOf(getCurrentFocus());
+        return Math.max(index, 0);
     }
 
     private void refresh() {
         show(page, focusedRow());
     }
 
+    /** Opens a topic page and remembers where to come back to. */
+    private void openPage(int newPage) {
+        mainFocus = focusedRow();
+        show(newPage, 0);
+    }
+
     /** Adds a row: a title and a one-line state under it. */
-    private void addRow(int titleRes, CharSequence summary, View.OnClickListener onClick) {
-        addRow(0, titleRes, summary, false, onClick);
+    private View addRow(int titleRes, CharSequence summary, View.OnClickListener onClick) {
+        return addRow(0, titleRes, summary, false, onClick);
     }
 
     /**
      * Adds a row with an icon (0 for none); {@code opensPage} adds the arrow that
      * marks rows leading to a page of their own.
      */
-    private void addRow(int icon, int titleRes, CharSequence summary, boolean opensPage,
+    private View addRow(int icon, int titleRes, CharSequence summary, boolean opensPage,
                         View.OnClickListener onClick) {
         View row = getLayoutInflater().inflate(R.layout.settings_row, rows, false);
         if (icon != 0) {
@@ -168,34 +228,240 @@ public final class SettingsActivity extends Activity {
         summaryView.setVisibility(TextUtils.isEmpty(summary) ? View.GONE : View.VISIBLE);
         row.setOnClickListener(onClick);
         rows.addView(row);
+        focusables.add(row);
+        return row;
     }
 
-    private void buildMain() {
-        title.setText(R.string.settings_page);
-        addRow(R.drawable.ic_home, R.string.default_title, defaultState(), true,
-                v -> show(PAGE_DEFAULT, 0));
-        addRow(R.drawable.ic_wallpaper, R.string.cat_wallpaper,
-                getText(SOURCE_NAMES[indexOf(SOURCES, Prefs.wallpaperMode(this))]), true,
-                v -> show(PAGE_WALLPAPER, 0));
-        addRow(R.drawable.ic_tv, R.string.cat_home, statsState(), true, v -> show(PAGE_HOME, 0));
-        addRow(R.drawable.ic_apps, R.string.cat_apps,
-                getString(R.string.hidden_summary, Prefs.hidden(this).size()), true,
-                v -> show(PAGE_APPS, 0));
-        addRow(R.drawable.ic_setup, R.string.setup_again_title, getText(R.string.setup_again_summary),
-                false, v -> open(new Intent(this, SetupActivity.class)));
-        addRow(R.drawable.ic_settings, R.string.system_title, getText(R.string.system_summary),
-                false, v -> open(new Intent(Settings.ACTION_SETTINGS)));
+    private void addSection(int titleRes) {
+        TextView section = (TextView) getLayoutInflater().inflate(R.layout.settings_section, rows, false);
+        section.setText(titleRes);
+        rows.addView(section);
+    }
 
-        String version = "";
-        try {
-            version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-        } catch (PackageManager.NameNotFoundException ignored) {
-            // Cannot happen for our own package.
+    /**
+     * The main page, laid out like the quick settings of Google TV: the clock, then
+     * tiles two to a line. Updates come first on a tile of double width, then the
+     * TV settings people reach for most, then the launcher's own topics.
+     */
+    private void buildMain() {
+        showClock();
+        int gap = getResources().getDimensionPixelSize(R.dimen.tile_gap);
+
+        View update = makeTile(R.drawable.ic_update,
+                getString(R.string.update_dialog_title, Updater.installedVersion(this)), updateState(),
+                v -> onUpdateClicked());
+        updateSummary = update.findViewById(R.id.tile_summary);
+        LinearLayout.LayoutParams wide = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        wide.bottomMargin = gap;
+        rows.addView(update, wide);
+
+        ArrayList<View> tv = new ArrayList<>(8);
+        addTile(tv, R.drawable.ic_wifi, R.string.qs_wifi, networkState(),
+                real(new Intent(Settings.ACTION_WIFI_SETTINGS)));
+        // Google TV has no Bluetooth screen to open directly, but it has the
+        // pairing screen for remotes and accessories.
+        addTile(tv, R.drawable.ic_bluetooth, R.string.qs_bluetooth, null,
+                real(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS),
+                        new Intent("com.google.android.intent.action.CONNECT_INPUT")));
+        addTile(tv, R.drawable.ic_picture, R.string.qs_picture, null,
+                real(new Intent(Settings.ACTION_DISPLAY_SETTINGS)));
+        addTile(tv, R.drawable.ic_sound, R.string.qs_sound, null,
+                real(new Intent(Settings.ACTION_SOUND_SETTINGS)));
+        addTile(tv, R.drawable.ic_accessibility, R.string.qs_accessibility, null,
+                real(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
+        addTile(tv, R.drawable.ic_storage, R.string.qs_storage, null,
+                real(new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS)));
+        tv.add(makeTile(R.drawable.ic_developer, getText(R.string.dev_title),
+                getText(DeveloperMode.isEnabled(this) ? R.string.dev_on : R.string.dev_hidden),
+                v -> DeveloperMode.open(this)));
+        addTileLines(tv, gap);
+
+        addSection(R.string.section_launcher);
+        ArrayList<View> launcher = new ArrayList<>(6);
+        launcher.add(makeTile(R.drawable.ic_home, getText(R.string.default_title), defaultState(),
+                v -> openPage(PAGE_DEFAULT)));
+        launcher.add(makeTile(R.drawable.ic_wallpaper, getText(R.string.cat_wallpaper),
+                getText(SOURCE_NAMES[indexOf(SOURCES, Prefs.wallpaperMode(this))]),
+                v -> openPage(PAGE_WALLPAPER)));
+        launcher.add(makeTile(R.drawable.ic_tv, getText(R.string.cat_home), statsState(),
+                v -> openPage(PAGE_HOME)));
+        launcher.add(makeTile(R.drawable.ic_apps, getText(R.string.cat_apps),
+                getString(R.string.hidden_summary, Prefs.hidden(this).size()),
+                v -> openPage(PAGE_APPS)));
+        launcher.add(makeTile(R.drawable.ic_setup, getText(R.string.setup_again_title),
+                getText(R.string.setup_again_summary), v -> open(new Intent(this, SetupActivity.class))));
+        launcher.add(makeTile(R.drawable.ic_schedule, getText(R.string.update_auto_title),
+                getText(Updater.autoCheck(this) ? R.string.update_auto_on : R.string.update_auto_off), v -> {
+                    boolean on = !Updater.autoCheck(this);
+                    Updater.setAutoCheck(this, on);
+                    if (on) Updater.checkIfDue(this, ok -> {
+                        if (!isFinishing()) refresh();
+                    });
+                    refresh();
+                }));
+        addTileLines(launcher, gap);
+    }
+
+    /** Time in large type where the app name stands on other pages, the date under it. */
+    private void showClock() {
+        Date now = new Date();
+        brand.setText(DateFormat.getTimeFormat(this).format(now));
+        title.setText(DateFormat.format(
+                DateFormat.getBestDateTimePattern(Locale.getDefault(), "EEEEdMMMM"), now));
+    }
+
+    // -------------------------------------------------------------------- tiles
+
+    /** Two tiles to a line, both as tall as the taller one; an odd last one keeps its width. */
+    private void addTileLines(ArrayList<View> tiles, int gap) {
+        for (int i = 0; i < tiles.size(); i += 2) {
+            LinearLayout line = new LinearLayout(this);
+            line.setOrientation(LinearLayout.HORIZONTAL);
+            line.addView(tiles.get(i), new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
+            View second = i + 1 < tiles.size() ? tiles.get(i + 1) : new View(this);
+            LinearLayout.LayoutParams secondParams = new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.MATCH_PARENT, 1);
+            secondParams.setMarginStart(gap);
+            line.addView(second, secondParams);
+            LinearLayout.LayoutParams lineParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lineParams.bottomMargin = gap;
+            rows.addView(line, lineParams);
         }
-        TextView versionView = (TextView) getLayoutInflater()
-                .inflate(R.layout.settings_version, rows, false);
-        versionView.setText(getString(R.string.version, version));
-        rows.addView(versionView);
+    }
+
+    /** A tile for a system screen; left out when the TV does not have that screen. */
+    private void addTile(ArrayList<View> tiles, int icon, int titleRes, CharSequence summary,
+                         final Intent target) {
+        if (target == null) return;
+        tiles.add(makeTile(icon, getText(titleRes), summary, v -> open(target)));
+    }
+
+    /** A tile: icon, a name of up to two lines and an optional state line. */
+    private View makeTile(int icon, CharSequence titleText, CharSequence summary,
+                          View.OnClickListener onClick) {
+        View tile = getLayoutInflater().inflate(R.layout.settings_tile, rows, false);
+        ((ImageView) tile.findViewById(R.id.tile_icon)).setImageResource(icon);
+        ((TextView) tile.findViewById(R.id.tile_title)).setText(titleText);
+        TextView summaryView = tile.findViewById(R.id.tile_summary);
+        summaryView.setText(summary);
+        summaryView.setVisibility(TextUtils.isEmpty(summary) ? View.GONE : View.VISIBLE);
+        tile.setOnClickListener(onClick);
+        focusables.add(tile);
+        return tile;
+    }
+
+    /** The first of the intents this TV has a real screen for, or null. */
+    private Intent real(Intent... intents) {
+        for (Intent intent : intents) {
+            Intent real = DefaultLauncher.real(this, intent);
+            if (real != null) return real;
+        }
+        return null;
+    }
+
+    @SuppressWarnings("deprecation")
+    private CharSequence networkState() {
+        NetworkInfo info = null;
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            if (cm != null) info = cm.getActiveNetworkInfo();
+        } catch (RuntimeException ignored) {
+            // Treated as no network.
+        }
+        if (info == null || !info.isConnected()) return getText(R.string.net_none);
+        return getText(info.getType() == ConnectivityManager.TYPE_ETHERNET
+                ? R.string.qs_ethernet : R.string.qs_connected);
+    }
+
+    // ------------------------------------------------------------------ updates
+
+    private CharSequence updateState() {
+        int progress = Updater.progress();
+        if (progress >= 0) return getString(R.string.update_downloading, progress);
+        String available = Updater.available(this);
+        if (available != null) return getString(R.string.update_available, available);
+        return getText(Updater.lastChecked(this) > 0 ? R.string.update_current : R.string.update_unknown);
+    }
+
+    /** A known update is offered for installing; otherwise GitHub is asked now. */
+    private void onUpdateClicked() {
+        if (Updater.progress() >= 0) return; // already downloading
+        String available = Updater.available(this);
+        if (available != null) {
+            offerUpdate(available);
+            return;
+        }
+        if (updateSummary != null) updateSummary.setText(R.string.update_checking);
+        Updater.check(this, ok -> {
+            if (isFinishing()) return;
+            refresh();
+            String found = Updater.available(this);
+            if (!ok) {
+                Toast.makeText(this, R.string.update_check_failed, Toast.LENGTH_LONG).show();
+            } else if (found != null) {
+                offerUpdate(found);
+            } else {
+                Toast.makeText(this, R.string.update_latest_toast, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void offerUpdate(String version) {
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.update_dialog_title, version))
+                .setMessage(R.string.update_dialog_text)
+                .setNegativeButton(R.string.update_later, null)
+                .setPositiveButton(R.string.update_install, (dialog, which) -> {
+                    if (Updater.canInstall(this)) {
+                        startUpdate();
+                    } else {
+                        askInstallPermission();
+                    }
+                })
+                .show();
+    }
+
+    /**
+     * Android 8+ lets an app hand APKs to the installer only after the user allows it
+     * on a system screen. The update goes on by itself once they come back.
+     */
+    private void askInstallPermission() {
+        final Intent screen = DefaultLauncher.real(this, new Intent(
+                "android.settings.MANAGE_UNKNOWN_APP_SOURCES", Uri.parse("package:" + getPackageName())));
+        if (screen == null) {
+            Toast.makeText(this, R.string.update_permission_manual, Toast.LENGTH_LONG).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.update_permission_title)
+                .setMessage(R.string.update_permission_text)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.update_permission_open, (dialog, which) -> {
+                    installAfterPermission = true;
+                    open(screen);
+                })
+                .show();
+    }
+
+    private void startUpdate() {
+        Toast.makeText(this, R.string.update_started, Toast.LENGTH_SHORT).show();
+        Updater.downloadAndInstall(this, new Updater.InstallListener() {
+            @Override
+            public void onProgress(int percent) {
+                if (updateSummary != null) updateSummary.setText(getString(R.string.update_downloading, percent));
+            }
+
+            @Override
+            public void onDone(String error) {
+                // The system installer asks for confirmation on its own; only errors are told here.
+                if (error != null) Toast.makeText(getApplicationContext(), error, Toast.LENGTH_LONG).show();
+                if (!isFinishing()) refresh();
+            }
+        });
+        refresh();
     }
 
     private void buildDefault() {
@@ -233,6 +499,42 @@ public final class SettingsActivity extends Activity {
                 rows.postDelayed(this::refresh, 500);
             });
         }
+        if (mode != Prefs.WALLPAPER_OFF) {
+            int minutes = Prefs.WALLPAPER_INTERVALS[Prefs.wallpaperInterval(this)];
+            addRow(R.string.interval_title, intervalName(minutes), v -> showIntervals());
+            addRow(R.string.dim_title,
+                    getResources().getStringArray(R.array.dim_levels)[Prefs.wallpaperDim(this)],
+                    v -> showDimLevels());
+        }
+    }
+
+    private CharSequence intervalName(int minutes) {
+        return minutes == 0 ? getText(R.string.interval_on_return)
+                : getString(R.string.interval_minutes, minutes);
+    }
+
+    private void showIntervals() {
+        CharSequence[] names = new CharSequence[Prefs.WALLPAPER_INTERVALS.length];
+        for (int i = 0; i < names.length; i++) names[i] = intervalName(Prefs.WALLPAPER_INTERVALS[i]);
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.interval_title)
+                .setSingleChoiceItems(names, Prefs.wallpaperInterval(this), (dialog, which) -> {
+                    dialog.dismiss();
+                    Prefs.setWallpaperInterval(this, which);
+                    refresh();
+                })
+                .show();
+    }
+
+    private void showDimLevels() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dim_title)
+                .setSingleChoiceItems(R.array.dim_levels, Prefs.wallpaperDim(this), (dialog, which) -> {
+                    dialog.dismiss();
+                    Prefs.setWallpaperDim(this, which);
+                    refresh();
+                })
+                .show();
     }
 
     private void buildHome() {
@@ -247,6 +549,11 @@ public final class SettingsActivity extends Activity {
 
     private void buildApps() {
         title.setText(R.string.cat_apps);
+        addRow(R.string.recent_title,
+                getText(Prefs.showRecent(this) ? R.string.recent_on : R.string.recent_off), v -> {
+                    Prefs.setShowRecent(this, !Prefs.showRecent(this));
+                    refresh();
+                });
         addRow(R.string.hidden_title, getString(R.string.hidden_summary, Prefs.hidden(this).size()),
                 v -> showHidden());
     }

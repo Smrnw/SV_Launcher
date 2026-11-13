@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Only needed to download wallpapers from GitHub. -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -13,6 +14,17 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <!-- Connection type for the optional status line. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Lets the app menu open the system "uninstall this app?" dialog. -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <!-- Lets the settings menu hand a downloaded update of SV Launcher itself to the
+         system installer. Android asks the user to allow it first and then to
+         confirm every installation. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Never asked for and never granted on its own. Only if the user gives it over
+         ADB can the launcher switch on developer options that the firmware hides. -->
+    <uses-permission
+        android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
 
     <uses-feature
         android:name="android.software.leanback"
@@ -50,6 +62,41 @@
         <intent>
             <action android:name="android.app.role.action.REQUEST_ROLE" />
         </intent>
+        <!-- Quick settings tiles: each one is shown only if the TV has the screen. -->
+        <intent>
+            <action android:name="android.settings.WIFI_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.BLUETOOTH_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="com.google.android.intent.action.CONNECT_INPUT" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.DISPLAY_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.SOUND_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.APPLICATION_DEVELOPMENT_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="com.android.settings.APPLICATION_DEVELOPMENT_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.DEVICE_INFO_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.INTERNAL_STORAGE_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.MANAGE_UNKNOWN_APP_SOURCES" />
+            <data android:scheme="package" />
+        </intent>
+        <!-- Hidden developer options are looked up by class name in these. -->
+        <package android:name="com.android.tv.settings" />
+        <package android:name="com.android.settings" />
         <intent>
             <action android:name="android.intent.action.OPEN_DOCUMENT" />
             <data android:mimeType="image/*" />
@@ -101,6 +148,12 @@
             android:exported="false"
             android:label="@string/settings"
             android:theme="@style/Theme.SV.Panel" />
+
+        <!-- The installer's answer for an update. Not exported: only the system
+             installer, through the explicit intent this app gives it, reaches it. -->
+        <receiver
+            android:name=".UpdateReceiver"
+            android:exported="false" />
 
         <service
             android:name=".HomeService"

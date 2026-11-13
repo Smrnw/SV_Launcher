@@ -16,6 +16,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.InputFilter;
+import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.LruCache;
 import android.view.KeyEvent;
@@ -25,9 +27,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
+import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
@@ -35,6 +39,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,7 +48,7 @@ import java.util.Locale;
 
 /**
  * The home screen: wallpaper, clock, status line, a row of favorites on its own
- * panel and the grid with all other apps below it.
+ * panel and, below it, the grid with recently used apps and everything else.
  */
 public final class HomeActivity extends Activity implements
         AdapterView.OnItemClickListener,
@@ -52,34 +57,59 @@ public final class HomeActivity extends Activity implements
         AbsListView.OnScrollListener,
         View.OnFocusChangeListener {
 
-    private static final long WALLPAPER_INTERVAL_MS = 5 * 60 * 1000L;
+    private static final long SYNC_RETRY_MS = 5 * 60 * 1000L;
     private static final long STATS_INTERVAL_MS = 2000L;
     private static final float FOCUS_SCALE = 1.12f;
     private static final int FOCUS_ANIM_MS = 160;
+    private static final int SCROLL_ANIM_MS = 200;
+    private static final int MAX_LABEL_LENGTH = 40;
+    /** More than fits on screen, so that hidden or pinned ones do not leave gaps. */
+    private static final int MAX_RECENT_STORED = 12;
+
+    // Where an app is shown. The same app can be both recent and in the full list.
+    private static final int SECTION_FAVORITES = 0;
+    private static final int SECTION_RECENT = 1;
+    private static final int SECTION_ALL = 2;
+
+    // Values of cellHeader besides a string resource id.
+    private static final int HEADER_NONE = 0;
+    private static final int HEADER_BLANK = -1;
 
     // Actions of the app menu (long press or the Menu key).
     private static final int ACTION_PIN = 0;
     private static final int ACTION_UNPIN = 1;
     private static final int ACTION_MOVE_LEFT = 2;
     private static final int ACTION_MOVE_RIGHT = 3;
-    private static final int ACTION_HIDE = 4;
-    private static final int ACTION_INFO = 5;
+    private static final int ACTION_FORGET_RECENT = 4;
+    private static final int ACTION_RENAME = 5;
+    private static final int ACTION_HIDE = 6;
+    private static final int ACTION_UNINSTALL = 7;
+    private static final int ACTION_INFO = 8;
 
     /** Rendered cards have a byte budget so large banners cannot crowd out the UI. */
     private LruCache<String, Bitmap> cards;
     private final HashSet<String> pending = new HashSet<>();
     private final AppAdapter adapter = new AppAdapter();
+    private final DecelerateInterpolator decelerate = new DecelerateInterpolator();
 
-    /** Every launchable app, sorted by name. */
+    /** Every launchable app, sorted by its original name. */
     private ArrayList<Apps.Entry> allApps = new ArrayList<>();
     /** Pinned apps as shown in the favorites row, in the user's order. */
     private ArrayList<Apps.Entry> favorites = new ArrayList<>();
-    /** Everything else: the content of the grid. */
-    private ArrayList<Apps.Entry> gridApps = new ArrayList<>();
+
+    // What the grid shows, cell by cell. A null entry is an empty cell that finishes
+    // the last row of a section so that the next one starts on a fresh row.
+    private ArrayList<Apps.Entry> cells = new ArrayList<>();
+    private int[] cellHeader = new int[0];
+    private int[] cellSection = new int[0];
 
     private ArrayList<String> pinned = new ArrayList<>();
+    private ArrayList<String> recent = new ArrayList<>();
     private HashSet<String> hidden = new HashSet<>();
+    private HashMap<String, String> labels = new HashMap<>();
+    private boolean showRecent;
     private int prefsRevision = -1;
+    private boolean recentDirty;
 
     private WallpaperView wallpaper;
     private View favoritesPanel;
@@ -95,7 +125,9 @@ public final class HomeActivity extends Activity implements
     private boolean navSound;
     /** The grid cell that currently wears the focus look, if any. */
     private View focusedCell;
+    private int lastSelected = -1;
 
+    private int columns;
     private int screenW;
     private int screenH;
     private int cardW;
@@ -110,16 +142,26 @@ public final class HomeActivity extends Activity implements
     /** False until the focus has been put on the first app after the apps loaded. */
     private boolean focusPlaced;
     private String wallpaperPath;
+    private long wallpaperIntervalMs;
 
     private final Runnable wallpaperTick = new Runnable() {
         @Override
         public void run() {
             loadWallpaper(false);
-            // Also the retry loop for the cloud: if the TV came up without a network,
-            // the sync is attempted again on every tick until it finally succeeds.
-            // Once it has, this call is a cheap no-op for the next few hours.
+            Worker.MAIN.postDelayed(this, wallpaperIntervalMs);
+        }
+    };
+
+    /**
+     * The retry loop for the cloud: if the TV came up without a network, the sync is
+     * attempted again on every tick until it finally succeeds. Once it has, the call
+     * is a cheap no-op for the next few hours.
+     */
+    private final Runnable syncTick = new Runnable() {
+        @Override
+        public void run() {
             Wallpapers.sync(HomeActivity.this, false);
-            Worker.MAIN.postDelayed(this, WALLPAPER_INTERVAL_MS);
+            Worker.MAIN.postDelayed(this, SYNC_RETRY_MS);
         }
     };
 
@@ -190,7 +232,7 @@ public final class HomeActivity extends Activity implements
         DisplayMetrics dm = getResources().getDisplayMetrics();
         screenW = Math.max(dm.widthPixels, dm.heightPixels);
         screenH = Math.min(dm.widthPixels, dm.heightPixels);
-        int columns = getResources().getInteger(R.integer.grid_columns);
+        columns = getResources().getInteger(R.integer.grid_columns);
         int pad = getResources().getDimensionPixelSize(R.dimen.grid_pad);
         cardGap = getResources().getDimensionPixelSize(R.dimen.grid_gap);
         cardW = (screenW - 2 * pad - (columns - 1) * cardGap) / columns;
@@ -220,6 +262,13 @@ public final class HomeActivity extends Activity implements
         grid.setOnItemSelectedListener(this);
         grid.setOnScrollListener(this);
         grid.setOnFocusChangeListener(this);
+        grid.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() == KeyEvent.ACTION_DOWN
+                    && (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN)) {
+                smoothNextScroll();
+            }
+            return false; // the grid still handles the key itself
+        });
         grid.requestFocus();
 
         findViewById(R.id.settings).setOnClickListener(
@@ -254,18 +303,26 @@ public final class HomeActivity extends Activity implements
             adapter.notifyDataSetChanged();
             loadVisibleFavoriteCards();
         }
-        // Settings may have unhidden apps or switched the wallpaper source meanwhile.
-        if (prefsRevision != Prefs.revision) {
+        // Settings may have changed something, and an app launched from here has
+        // moved to the front of the recent list.
+        if (prefsRevision != Prefs.revision || recentDirty) {
+            Apps.Entry selected = grid.hasFocus() ? entryAt(grid.getSelectedItemPosition()) : null;
             readPrefs();
-            rebuild(null);
+            rebuild(selected != null ? selected.pkg : null);
         }
         updateTopButtons();
-        applyStats();
+        showUpdateBadge();
+        // Once a day at most, and only if the user has not switched it off.
+        Updater.checkIfDue(this, ok -> {
+            if (!destroyed) showUpdateBadge();
+        });
+
+        offerToHideJunk();
+        applySettings();
         Wallpapers.listener = wallpapersChanged;
         // A different wallpaper every time the home screen opens, then on a timer.
         loadWallpaper(false);
-        Worker.MAIN.postDelayed(wallpaperTick, WALLPAPER_INTERVAL_MS);
-        Wallpapers.sync(this, false);
+        Worker.MAIN.post(syncTick);
     }
 
     /**
@@ -279,15 +336,22 @@ public final class HomeActivity extends Activity implements
         if (prefsRevision == Prefs.revision) return;
         readPrefs();
         rebuild(null);
-        applyStats();
+        applySettings();
         // Keeps the picture if it still belongs to the selected source.
         loadWallpaper(true);
         Wallpapers.sync(this, false);
     }
 
-    /** Shows or hides the status line according to the settings and (re)starts it. */
-    private void applyStats() {
-        // Not about stats, but read at the same moments: whenever settings may have changed.
+    /**
+     * Applies the settings that do not need the app list rebuilt: status line,
+     * navigation sound, wallpaper dimming and timer.
+     */
+    private void applySettings() {
+        wallpaper.setDim(Prefs.WALLPAPER_DIM[Prefs.wallpaperDim(this)]);
+        wallpaperIntervalMs = Prefs.WALLPAPER_INTERVALS[Prefs.wallpaperInterval(this)] * 60000L;
+        Worker.MAIN.removeCallbacks(wallpaperTick);
+        if (started && wallpaperIntervalMs > 0) Worker.MAIN.postDelayed(wallpaperTick, wallpaperIntervalMs);
+
         navSound = Prefs.navSound(this);
         // Plays only if the system's own interface sounds are on, too.
         grid.setSoundEffectsEnabled(navSound);
@@ -308,6 +372,7 @@ public final class HomeActivity extends Activity implements
         started = false;
         Wallpapers.listener = null;
         Worker.MAIN.removeCallbacks(wallpaperTick);
+        Worker.MAIN.removeCallbacks(syncTick);
         Worker.MAIN.removeCallbacks(statsTick);
     }
 
@@ -338,7 +403,7 @@ public final class HomeActivity extends Activity implements
             favoritesRow.getChildAt(0).requestFocus();
         } else {
             grid.requestFocus();
-            if (!gridApps.isEmpty()) grid.setSelection(0);
+            if (!cells.isEmpty()) grid.setSelection(0);
         }
     }
 
@@ -434,25 +499,43 @@ public final class HomeActivity extends Activity implements
                 allApps = list;
                 if (prefsRevision != Prefs.revision) readPrefs();
                 rebuild(null);
+                offerToHideJunk();
             });
         });
     }
 
     private void readPrefs() {
         pinned = Prefs.pinned(this);
+        recent = Prefs.recent(this);
         hidden = Prefs.hidden(this);
+        labels = Prefs.labels(this);
+        showRecent = Prefs.showRecent(this);
+        prefsRevision = Prefs.revision;
+        recentDirty = false;
+    }
+
+    /** Remembers our own change so that onStart does not mistake it for a foreign one. */
+    private void saved() {
         prefsRevision = Prefs.revision;
     }
 
-    /** Saves the lists without making onStart think somebody else changed them. */
-    private void savePrefs() {
-        Prefs.setPinned(this, pinned);
-        Prefs.setHidden(this, hidden);
-        prefsRevision = Prefs.revision;
+    /** The name shown under a card: the user's own one if there is any. */
+    private String labelOf(Apps.Entry entry) {
+        String custom = labels.get(entry.pkg);
+        return custom != null ? custom : entry.label;
+    }
+
+    private Apps.Entry find(String pkg) {
+        for (int i = 0, n = allApps.size(); i < n; i++) {
+            Apps.Entry e = allApps.get(i);
+            if (e.pkg.equals(pkg)) return e;
+        }
+        return null;
     }
 
     /**
-     * Splits the apps into the favorites row and the grid and refreshes both.
+     * Splits the apps into the favorites row and the sections of the grid and
+     * refreshes both.
      *
      * @param focusPkg package to move the focus to afterwards, or null to leave it
      *                 where it is
@@ -468,26 +551,50 @@ public final class HomeActivity extends Activity implements
         // Pinned apps keep the user's order. A package that is missing right now
         // (being updated, on an unplugged drive) stays in the saved list.
         ArrayList<Apps.Entry> pinnedApps = new ArrayList<>();
-        HashSet<String> shown = new HashSet<>();
+        HashSet<String> pinnedShown = new HashSet<>();
         for (int i = 0; i < pinned.size(); i++) {
             String pkg = pinned.get(i);
-            if (hidden.contains(pkg)) continue;
-            for (int j = 0, n = allApps.size(); j < n; j++) {
-                Apps.Entry e = allApps.get(j);
-                if (e.pkg.equals(pkg)) {
-                    if (shown.add(pkg)) pinnedApps.add(e);
-                    break;
-                }
+            Apps.Entry e = hidden.contains(pkg) ? null : find(pkg);
+            if (e != null && pinnedShown.add(pkg)) pinnedApps.add(e);
+        }
+
+        // One row of recent apps at most; pinned ones are already at hand.
+        ArrayList<Apps.Entry> recentApps = new ArrayList<>();
+        if (showRecent) {
+            for (int i = 0; i < recent.size() && recentApps.size() < columns; i++) {
+                String pkg = recent.get(i);
+                if (hidden.contains(pkg) || pinnedShown.contains(pkg)) continue;
+                Apps.Entry e = find(pkg);
+                if (e != null) recentApps.add(e);
             }
         }
+
         ArrayList<Apps.Entry> rest = new ArrayList<>(allApps.size());
         for (int i = 0, n = allApps.size(); i < n; i++) {
             Apps.Entry e = allApps.get(i);
-            if (!hidden.contains(e.pkg) && !shown.contains(e.pkg)) rest.add(e);
+            if (!hidden.contains(e.pkg) && !pinnedShown.contains(e.pkg)) rest.add(e);
+        }
+        if (!labels.isEmpty()) {
+            // Renamed apps have to find their new place in the alphabet.
+            final Collator collator = Collator.getInstance();
+            Collections.sort(rest, (a, b) -> collator.compare(labelOf(a), labelOf(b)));
         }
 
+        // Grid titles only make sense when the grid has more than one section.
+        boolean titled = !recentApps.isEmpty();
+        int capacity = recentApps.size() + rest.size() + columns;
+        ArrayList<Apps.Entry> out = new ArrayList<>(capacity);
+        int[] headers = new int[capacity];
+        int[] sections = new int[capacity];
+        addSection(out, headers, sections, recentApps, SECTION_RECENT,
+                titled ? R.string.section_recent : HEADER_NONE, true);
+        addSection(out, headers, sections, rest, SECTION_ALL,
+                titled ? R.string.section_all : HEADER_NONE, false);
+
         favorites = pinnedApps;
-        gridApps = rest;
+        cells = out;
+        cellHeader = headers;
+        cellSection = sections;
         buildFavorites();
         adapter.notifyDataSetChanged();
 
@@ -501,6 +608,27 @@ public final class HomeActivity extends Activity implements
         if (!allApps.isEmpty()) focusPlaced = true;
         // Whatever happened to the views, the remote must never be left without focus.
         if (getCurrentFocus() == null) grid.requestFocus();
+    }
+
+    /**
+     * Appends one grid section. Its title sits inside the cells of its first row:
+     * shown in the first cell, blank (but still taking height) in the others, so the
+     * row stays even.
+     */
+    private void addSection(ArrayList<Apps.Entry> out, int[] headers, int[] sections,
+                            ArrayList<Apps.Entry> apps, int section, int title, boolean padRow) {
+        if (apps.isEmpty()) return;
+        int start = out.size();
+        out.addAll(apps);
+        if (padRow) {
+            while (out.size() % columns != 0) out.add(null);
+        }
+        for (int i = start; i < out.size(); i++) {
+            sections[i] = section;
+            if (title != HEADER_NONE && i < start + columns) {
+                headers[i] = i == start ? title : HEADER_BLANK;
+            }
+        }
     }
 
     /** Recreates the favorites row. It holds a handful of views, so no recycling. */
@@ -520,16 +648,16 @@ public final class HomeActivity extends Activity implements
             Holder h = new Holder(item);
             h.entry = entry;
             item.setTag(h);
-            h.label.setText(entry.label);
+            h.label.setText(labelOf(entry));
             h.card.setImageBitmap(cards.get(entry.pkg));
 
             item.setId(View.generateViewId());
             item.setFocusable(true);
             item.setOnFocusChangeListener(favoriteFocus);
             item.setOnKeyListener(favoriteKeys);
-            item.setOnClickListener(v -> open(entry.launchIntent()));
+            item.setOnClickListener(v -> launch(entry));
             item.setOnLongClickListener(v -> {
-                showMenu(entry);
+                showMenu(entry, SECTION_FAVORITES);
                 return true;
             });
             item.setNextFocusDownId(R.id.grid);
@@ -569,8 +697,10 @@ public final class HomeActivity extends Activity implements
                 return;
             }
         }
-        for (int i = 0, n = gridApps.size(); i < n; i++) {
-            if (gridApps.get(i).pkg.equals(pkg)) {
+        for (int i = 0, n = cells.size(); i < n; i++) {
+            Apps.Entry e = cells.get(i);
+            if (e != null && e.pkg.equals(pkg)) {
+                lastSelected = i;
                 grid.requestFocus();
                 grid.setSelection(i);
                 return;
@@ -584,8 +714,8 @@ public final class HomeActivity extends Activity implements
         return tag instanceof Holder ? ((Holder) tag).entry : null;
     }
 
-    private Apps.Entry gridEntryAt(int position) {
-        return position >= 0 && position < gridApps.size() ? gridApps.get(position) : null;
+    private Apps.Entry entryAt(int position) {
+        return position >= 0 && position < cells.size() ? cells.get(position) : null;
     }
 
     private void requestCard(final Apps.Entry entry) {
@@ -606,8 +736,12 @@ public final class HomeActivity extends Activity implements
         });
     }
 
-    /** Puts a freshly rendered card into the view that is waiting for it. */
-    private static boolean showCard(ViewGroup parent, Apps.Entry entry, Bitmap bitmap) {
+    /**
+     * Puts a freshly rendered card into every view that is waiting for it: the same
+     * app can be on screen twice, among the recent ones and in the full list.
+     * Favorites scrolled out of sight stay empty to save memory.
+     */
+    private static void showCard(ViewGroup parent, Apps.Entry entry, Bitmap bitmap) {
         boolean favorites = parent.getId() == R.id.favorites_row;
         HorizontalScrollView scroll = favorites && parent.getParent() instanceof HorizontalScrollView
                 ? (HorizontalScrollView) parent.getParent() : null;
@@ -616,14 +750,11 @@ public final class HomeActivity extends Activity implements
         for (int i = 0, n = parent.getChildCount(); i < n; i++) {
             View item = parent.getChildAt(i);
             Holder h = (Holder) parent.getChildAt(i).getTag();
-            if (h != null && h.entry == entry) {
-                if (!favorites || (item.getRight() >= visibleLeft && item.getLeft() <= visibleRight)) {
-                    h.card.setImageBitmap(bitmap);
-                }
-                return true;
+            if (h != null && h.entry == entry
+                    && (!favorites || (item.getRight() >= visibleLeft && item.getLeft() <= visibleRight))) {
+                h.card.setImageBitmap(bitmap);
             }
         }
-        return false;
     }
 
     /**
@@ -636,18 +767,7 @@ public final class HomeActivity extends Activity implements
         if (manager == null) return inputs;
         try {
             for (TvInputInfo input : manager.getTvInputList()) {
-                android.content.pm.ServiceInfo service = input.getServiceInfo();
-                if (service == null || service.applicationInfo == null) continue;
-                int flags = service.applicationInfo.flags;
-                boolean systemInput = (flags & (ApplicationInfo.FLAG_SYSTEM
-                        | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
-                boolean physicalInput = input.isPassthroughInput()
-                        || input.getType() == TvInputInfo.TYPE_TUNER;
-                // Apps can register TV channels too. Only built-in TV services own
-                // the physical ports that belong in this source picker.
-                // A CEC device input hangs off its port: the port shows its name instead.
-                boolean device = input.getParentId() != null;
-                if (systemInput && physicalInput && !device) inputs.add(input);
+                if (isPhysicalInput(input)) inputs.add(input);
             }
         } catch (RuntimeException e) {
             return new ArrayList<>(); // the TV service went away mid-call
@@ -665,6 +785,29 @@ public final class HomeActivity extends Activity implements
             if (seenLabels.add(label)) unique.add(input);
         }
         return unique;
+    }
+
+    /**
+     * A port of the TV itself. Apps can register TV channels too; only built-in TV
+     * services own the physical ports that belong in the source picker. A CEC
+     * device input hangs off its port, and the port shows its name instead.
+     */
+    private static boolean isPhysicalInput(TvInputInfo input) {
+        android.content.pm.ServiceInfo service = input.getServiceInfo();
+        if (service == null || service.applicationInfo == null) return false;
+        int flags = service.applicationInfo.flags;
+        boolean systemInput = (flags & (ApplicationInfo.FLAG_SYSTEM
+                | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+        boolean physicalInput = input.isPassthroughInput()
+                || input.getType() == TvInputInfo.TYPE_TUNER;
+        return systemInput && physicalInput && input.getParentId() == null;
+    }
+
+    /** A dot on the gear while a newer version waits in the settings menu. */
+    private void showUpdateBadge() {
+        boolean update = Updater.available(this) != null;
+        ((ImageView) settingsButton).setImageResource(
+                update ? R.drawable.ic_settings_update : R.drawable.ic_settings);
     }
 
     /**
@@ -911,48 +1054,103 @@ public final class HomeActivity extends Activity implements
         }
     }
 
-    private void open(Intent intent) {
+    private boolean open(Intent intent) {
         try {
             startActivity(intent);
+            return true;
         } catch (RuntimeException e) {
             // The app may have been removed or disabled a moment ago.
             Toast.makeText(this, R.string.cant_open, Toast.LENGTH_SHORT).show();
+            return false;
         }
+    }
+
+    private void launch(Apps.Entry entry) {
+        if (!open(entry.launchIntent())) return;
+        // The screen is rearranged later, in onStart: shuffling cards around in the
+        // split second before the app covers the screen would only be a distraction.
+        recent.remove(entry.pkg);
+        recent.add(0, entry.pkg);
+        while (recent.size() > MAX_RECENT_STORED) recent.remove(recent.size() - 1);
+        Prefs.setRecent(this, recent);
+        saved();
+        recentDirty = true;
     }
 
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        Apps.Entry entry = gridEntryAt(position);
-        if (entry != null) open(entry.launchIntent());
+        Apps.Entry entry = entryAt(position);
+        if (entry != null) launch(entry);
     }
 
     @Override
     public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-        Apps.Entry entry = gridEntryAt(position);
-        if (entry != null) showMenu(entry);
+        Apps.Entry entry = entryAt(position);
+        if (entry != null) showMenu(entry, cellSection[position]);
         return true;
     }
 
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_MENU) {
-            Apps.Entry entry = grid.hasFocus()
-                    ? gridEntryAt(grid.getSelectedItemPosition())
-                    : entryOf(getCurrentFocus());
-            if (entry != null) {
-                showMenu(entry);
-                return true;
+            if (grid.hasFocus()) {
+                int position = grid.getSelectedItemPosition();
+                Apps.Entry entry = entryAt(position);
+                if (entry != null) {
+                    showMenu(entry, cellSection[position]);
+                    return true;
+                }
+            } else {
+                Apps.Entry entry = entryOf(getCurrentFocus());
+                if (entry != null) {
+                    showMenu(entry, SECTION_FAVORITES);
+                    return true;
+                }
             }
         }
         return super.onKeyUp(keyCode, event);
     }
 
+    /**
+     * Asked once, after the first start: firmware often ships service components
+     * whose "name" is a Java class name. Nobody wants those on the home screen.
+     */
+    private void offerToHideJunk() {
+        // Wait until the first-start wizard is out of the way.
+        if (!started || isFinishing() || allApps.isEmpty()) return;
+        if (!Prefs.setupDone(this) || Prefs.junkChecked(this)) return;
+        Prefs.setJunkChecked(this);
+        final ArrayList<String> packages = new ArrayList<>();
+        ArrayList<String> names = new ArrayList<>();
+        for (Apps.Entry e : allApps) {
+            if (e.junk && !hidden.contains(e.pkg)) {
+                packages.add(e.pkg);
+                if (names.size() < 6) names.add(e.label);
+            }
+        }
+        if (packages.isEmpty()) return;
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.junk_title)
+                .setMessage(getString(R.string.junk_message, packages.size(),
+                        TextUtils.join(", ", names)))
+                .setNegativeButton(R.string.junk_keep, null)
+                .setPositiveButton(R.string.junk_hide, (dialog, which) -> {
+                    hidden.addAll(packages);
+                    pinned.removeAll(packages);
+                    Prefs.setHidden(this, hidden);
+                    Prefs.setPinned(this, pinned);
+                    saved();
+                    rebuild(null);
+                })
+                .show();
+    }
+
     // ----------------------------------------------------------------- app menu
 
-    private void showMenu(final Apps.Entry entry) {
+    private void showMenu(final Apps.Entry entry, int section) {
         final int index = favorites.indexOf(entry);
-        ArrayList<CharSequence> titles = new ArrayList<>(5);
-        final ArrayList<Integer> actions = new ArrayList<>(5);
+        ArrayList<CharSequence> titles = new ArrayList<>(8);
+        final ArrayList<Integer> actions = new ArrayList<>(8);
         if (index < 0) {
             titles.add(getText(R.string.menu_pin));
             actions.add(ACTION_PIN);
@@ -968,26 +1166,39 @@ public final class HomeActivity extends Activity implements
             titles.add(getText(R.string.menu_unpin));
             actions.add(ACTION_UNPIN);
         }
+        if (section == SECTION_RECENT) {
+            titles.add(getText(R.string.menu_forget_recent));
+            actions.add(ACTION_FORGET_RECENT);
+        }
+        titles.add(getText(R.string.menu_rename));
+        actions.add(ACTION_RENAME);
         titles.add(getText(R.string.menu_hide));
         actions.add(ACTION_HIDE);
+        if (!entry.system) {
+            titles.add(getText(R.string.menu_uninstall));
+            actions.add(ACTION_UNINSTALL);
+        }
         titles.add(getText(R.string.menu_info));
         actions.add(ACTION_INFO);
 
         new AlertDialog.Builder(this)
-                .setTitle(entry.label)
+                .setTitle(labelOf(entry))
                 .setItems(titles.toArray(new CharSequence[0]),
                         (dialog, which) -> onMenuAction(entry, actions.get(which)))
                 .show();
     }
 
     private void onMenuAction(Apps.Entry entry, int action) {
+        String focus = entry.pkg;
         switch (action) {
             case ACTION_PIN:
                 pinned.remove(entry.pkg);
                 pinned.add(entry.pkg);
+                Prefs.setPinned(this, pinned);
                 break;
             case ACTION_UNPIN:
                 pinned.remove(entry.pkg);
+                Prefs.setPinned(this, pinned);
                 break;
             case ACTION_MOVE_LEFT:
             case ACTION_MOVE_RIGHT: {
@@ -1001,13 +1212,29 @@ public final class HomeActivity extends Activity implements
                 if (a < 0 || b < 0) return;
                 pinned.set(a, pinned.get(b));
                 pinned.set(b, entry.pkg);
+                Prefs.setPinned(this, pinned);
                 break;
             }
+            case ACTION_FORGET_RECENT:
+                recent.remove(entry.pkg);
+                Prefs.setRecent(this, recent);
+                break;
+            case ACTION_RENAME:
+                showRename(entry);
+                return;
             case ACTION_HIDE:
                 hidden.add(entry.pkg);
                 pinned.remove(entry.pkg);
+                Prefs.setHidden(this, hidden);
+                Prefs.setPinned(this, pinned);
                 Toast.makeText(this, R.string.hidden_hint, Toast.LENGTH_LONG).show();
+                focus = null;
                 break;
+            case ACTION_UNINSTALL:
+                // The system asks for confirmation itself; the list refreshes when
+                // the "package removed" broadcast arrives.
+                open(new Intent(Intent.ACTION_DELETE, Uri.fromParts("package", entry.pkg, null)));
+                return;
             case ACTION_INFO:
                 open(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                         Uri.fromParts("package", entry.pkg, null)));
@@ -1015,14 +1242,111 @@ public final class HomeActivity extends Activity implements
             default:
                 return;
         }
-        savePrefs();
-        rebuild(action == ACTION_HIDE ? null : entry.pkg);
+        saved();
+        rebuild(focus);
+    }
+
+    private void showRename(final Apps.Entry entry) {
+        final EditText input = new EditText(this);
+        input.setSingleLine();
+        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(MAX_LABEL_LENGTH)});
+        input.setText(labelOf(entry));
+        input.setSelectAllOnFocus(true);
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.menu_rename)
+                .setView(input)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setNeutralButton(R.string.rename_reset, (dialog, which) -> rename(entry, ""))
+                .setPositiveButton(android.R.string.ok,
+                        (dialog, which) -> rename(entry, input.getText().toString()))
+                .show();
+    }
+
+    private void rename(Apps.Entry entry, String name) {
+        name = Prefs.clean(name);
+        // An empty name, or the original one, means "no custom name".
+        if (name.isEmpty() || name.equals(entry.label)) {
+            labels.remove(entry.pkg);
+        } else {
+            labels.put(entry.pkg, name);
+        }
+        Prefs.setLabels(this, labels);
+        saved();
+        rebuild(entry.pkg);
+    }
+
+    // ------------------------------------------------------------------- scroll
+
+    /**
+     * GridView answers the D-pad by jumping to the new position in one frame. We let
+     * it, then shift the whole grid back by the distance it jumped and let that
+     * shift ease out. The eye sees the rows glide; the cost is one GPU-side property
+     * animation on a single view.
+     */
+    private void smoothNextScroll() {
+        final int count = grid.getChildCount();
+        if (count == 0) return;
+        // Rows may get recycled by the jump, so remember both ends of the screen.
+        final int firstPos = grid.getFirstVisiblePosition();
+        final int firstTop = grid.getChildAt(0).getTop();
+        final int lastPos = firstPos + count - 1;
+        final int lastTop = grid.getChildAt(count - 1).getTop();
+        grid.post(() -> {
+            int moved = movedBy(firstPos, firstTop);
+            if (moved == Integer.MIN_VALUE) moved = movedBy(lastPos, lastTop);
+            if (moved == Integer.MIN_VALUE || moved == 0) return;
+            grid.animate().cancel();
+            // Holding the key down stacks the jumps on top of the current offset.
+            grid.setTranslationY(grid.getTranslationY() - moved);
+            grid.animate().translationY(0f).setDuration(SCROLL_ANIM_MS).setInterpolator(decelerate);
+        });
+    }
+
+    /** How far the cell has travelled since its top was {@code oldTop}; MIN_VALUE if it is gone. */
+    private int movedBy(int position, int oldTop) {
+        int index = position - grid.getFirstVisiblePosition();
+        if (index < 0 || index >= grid.getChildCount()) return Integer.MIN_VALUE;
+        return grid.getChildAt(index).getTop() - oldTop;
+    }
+
+    /**
+     * Rows leaving through the top of the grid are cut by its edge. Dimming them in
+     * proportion to how much is cut turns the hard edge into a soft one, and costs
+     * nothing: card alpha is handled by the GPU without an extra layer.
+     */
+    @Override
+    public void onScroll(AbsListView view, int first, int visible, int total) {
+        int top = view.getPaddingTop();
+        for (int i = 0, n = view.getChildCount(); i < n; i++) {
+            View child = view.getChildAt(i);
+            Holder h = (Holder) child.getTag();
+            if (h == null) continue;
+            int cut = top - child.getTop();
+            h.card.setAlpha(cut <= 0 ? 1f : Math.max(0f, 1f - cut / (float) cardH));
+        }
+    }
+
+    @Override
+    public void onScrollStateChanged(AbsListView view, int scrollState) {
     }
 
     // -------------------------------------------------------------------- focus
 
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        if (position >= 0 && position < cells.size() && cells.get(position) == null) {
+            // The D-pad landed on an empty cell at the end of a section. "Right" from
+            // the section's last app simply stays put; coming from the row above or
+            // below goes to that last app.
+            int target = lastSelected;
+            if (position - lastSelected != 1 || entryAt(lastSelected) == null) {
+                target = position;
+                while (target > 0 && cells.get(target) == null) target--;
+            }
+            grid.setSelection(target);
+            return;
+        }
+        lastSelected = position;
         if (focusedCell != null && focusedCell != view) setFocused(focusedCell, false, true);
         focusedCell = null;
         if (view != null && grid.hasFocus()) {
@@ -1042,7 +1366,7 @@ public final class HomeActivity extends Activity implements
     public void onFocusChange(View v, boolean hasFocus) {
         if (hasFocus) {
             View selected = grid.getSelectedView();
-            if (selected != null) {
+            if (selected != null && entryAt(grid.getSelectedItemPosition()) != null) {
                 setFocused(selected, true, true);
                 focusedCell = selected;
             }
@@ -1092,28 +1416,8 @@ public final class HomeActivity extends Activity implements
         }
     }
 
-    /**
-     * Rows leaving through the top of the grid are cut by its edge. Dimming them in
-     * proportion to how much is cut turns the hard edge into a soft one, and costs
-     * nothing: card alpha is handled by the GPU without an extra layer.
-     */
-    @Override
-    public void onScroll(AbsListView view, int first, int visible, int total) {
-        int top = view.getPaddingTop();
-        for (int i = 0, n = view.getChildCount(); i < n; i++) {
-            View child = view.getChildAt(i);
-            Holder h = (Holder) child.getTag();
-            if (h == null) continue;
-            int cut = top - child.getTop();
-            h.card.setAlpha(cut <= 0 ? 1f : Math.max(0f, 1f - cut / (float) cardH));
-        }
-    }
-
-    @Override
-    public void onScrollStateChanged(AbsListView view, int scrollState) {
-    }
-
     private static final class Holder {
+        final TextView header;
         final BannerView card;
         final TextView label;
         Apps.Entry entry;
@@ -1121,6 +1425,7 @@ public final class HomeActivity extends Activity implements
         boolean lit;
 
         Holder(View item) {
+            header = item.findViewById(R.id.header);
             card = item.findViewById(R.id.card);
             label = item.findViewById(R.id.label);
         }
@@ -1130,17 +1435,27 @@ public final class HomeActivity extends Activity implements
 
         @Override
         public int getCount() {
-            return gridApps.size();
+            return cells.size();
         }
 
         @Override
         public Object getItem(int position) {
-            return gridApps.get(position);
+            return cells.get(position);
         }
 
         @Override
         public long getItemId(int position) {
             return position;
+        }
+
+        @Override
+        public boolean areAllItemsEnabled() {
+            return false;
+        }
+
+        @Override
+        public boolean isEnabled(int position) {
+            return cells.get(position) != null;
         }
 
         @Override
@@ -1155,15 +1470,34 @@ public final class HomeActivity extends Activity implements
                 h = (Holder) view.getTag();
             }
 
-            Apps.Entry entry = gridApps.get(position);
-            h.entry = entry;
-            h.label.setText(entry.label);
-            h.card.setAlpha(1f);
-            Bitmap bitmap = cards.get(entry.pkg);
-            h.card.setImageBitmap(bitmap);
-            if (bitmap == null) requestCard(entry);
+            int header = cellHeader[position];
+            if (header == HEADER_NONE) {
+                h.header.setVisibility(View.GONE);
+            } else if (header == HEADER_BLANK) {
+                h.header.setVisibility(View.INVISIBLE);
+            } else {
+                h.header.setVisibility(View.VISIBLE);
+                h.header.setText(header);
+            }
 
-            boolean selected = grid.hasFocus() && position == grid.getSelectedItemPosition();
+            Apps.Entry entry = cells.get(position);
+            h.entry = entry;
+            h.card.setAlpha(1f);
+            if (entry == null) {
+                // Filler cell: takes up space, shows nothing.
+                h.card.setVisibility(View.INVISIBLE);
+                h.card.setImageBitmap(null);
+                h.label.setText(null);
+            } else {
+                h.card.setVisibility(View.VISIBLE);
+                h.label.setText(labelOf(entry));
+                Bitmap bitmap = cards.get(entry.pkg);
+                h.card.setImageBitmap(bitmap);
+                if (bitmap == null) requestCard(entry);
+            }
+
+            boolean selected = entry != null && grid.hasFocus()
+                    && position == grid.getSelectedItemPosition();
             setFocused(view, selected, false);
             if (selected) {
                 focusedCell = view;

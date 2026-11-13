@@ -113,7 +113,7 @@ final class DefaultLauncher {
         return null;
     }
 
-    private static boolean isStub(ActivityInfo ai) {
+    static boolean isStub(ActivityInfo ai) {
         String pkg = ai.packageName.toLowerCase(java.util.Locale.US);
         String cls = ai.name.toLowerCase(java.util.Locale.US);
         return pkg.contains("stub") || cls.contains("stub");

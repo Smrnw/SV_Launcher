@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Quick settings tile: an icon over a short name and, for some, a state line.
+     Two of them share a row of the panel. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:background="@drawable/tile_bg"
+    android:clickable="true"
+    android:focusable="true"
+    android:minHeight="86dp"
+    android:orientation="vertical"
+    android:paddingStart="14dp"
+    android:paddingTop="13dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="11dp">
+
+    <ImageView
+        android:id="@+id/tile_icon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:duplicateParentState="true"
+        android:importantForAccessibility="no"
+        android:tint="@color/row_content" />
+
+    <TextView
+        android:id="@+id/tile_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:duplicateParentState="true"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:textColor="@color/row_content"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/tile_summary"
+        style="@style/RowSummary"
+        android:layout_marginTop="1dp"
+        android:textSize="11sp"
+        android:visibility="gone" />
+</LinearLayout>

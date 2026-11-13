@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
@@ -25,12 +26,19 @@ final class Apps {
         final String cls;
         final String label;
         final boolean leanback;
+        /** Part of the firmware: cannot be uninstalled. */
+        final boolean system;
+        /** Has a class or package name instead of a proper label. */
+        final boolean junk;
 
-        Entry(String pkg, String cls, String label, boolean leanback) {
+        Entry(String pkg, String cls, String label, boolean leanback, boolean system) {
             this.pkg = pkg;
             this.cls = cls;
             this.label = label;
             this.leanback = leanback;
+            this.system = system;
+            this.junk = label.equals(cls) || label.equals(pkg)
+                    || label.matches("[a-z][a-z0-9_]*(\\.[A-Za-z0-9_$]+)+");
         }
 
         Intent launchIntent() {
@@ -66,8 +74,10 @@ final class Apps {
             ActivityInfo ai = ri.activityInfo;
             if (ai == null || !seen.add(ai.packageName)) continue;
             CharSequence label = ri.loadLabel(pm);
+            boolean system = ai.applicationInfo != null
+                    && (ai.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
             out.add(new Entry(ai.packageName, ai.name,
-                    label != null ? label.toString() : ai.packageName, leanback));
+                    label != null ? label.toString() : ai.packageName, leanback, system));
         }
     }
 

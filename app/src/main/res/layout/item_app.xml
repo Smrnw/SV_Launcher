@@ -7,6 +7,21 @@
     android:clipToPadding="false"
     android:orientation="vertical">
 
+    <!-- Section title in the grid. Shown in the first cell of a section's first row;
+         the other cells of that row keep it invisible so the row has an even height. -->
+    <TextView
+        android:id="@+id/header"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:shadowColor="#A0000000"
+        android:shadowRadius="5"
+        android:singleLine="true"
+        android:textAllCaps="true"
+        android:textColor="@color/text_dim"
+        android:textSize="11sp"
+        android:visibility="gone" />
+
     <com.smrnw.svlauncher.BannerView
         android:id="@+id/card"
         android:layout_width="match_parent"
