@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Row"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/option_title"
+        style="@style/RowTitle" />
+
+    <TextView
+        android:id="@+id/option_summary"
+        style="@style/RowSummary" />
+</LinearLayout>

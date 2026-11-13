@@ -1,0 +1,171 @@
+SV Launcher Personal Use License, version 1.0
+
+Copyright (c) 2026 smrnw. All rights reserved.
+
+This license applies to SV Launcher: its source code, build files, documentation,
+graphics and the application packages built from them (together, the "Software").
+
+1. Permitted use
+
+   You may, free of charge and for your own personal, non-commercial purposes only:
+
+   a) download, install and run the Software on devices that you personally own
+      or use at home;
+   b) read the source code and build the Software from it for the use described
+      in (a);
+   c) modify the Software for the use described in (a), provided that you keep
+      the modified version to yourself.
+
+2. Everything else requires a separate license
+
+   Any use not expressly permitted in section 1 requires prior written permission
+   (an additional license) from the author. Without it you may not, in particular:
+
+   a) use the Software, in whole or in part, for any commercial purpose or
+      within any business, organization or institution;
+   b) distribute, publish, sell, rent, lease, sublicense or otherwise make the
+      Software or any modified version of it available to anyone else, whether
+      as source code or in built form, including through app stores, websites,
+      file sharing and messaging channels;
+   c) preinstall or bundle the Software with any device, firmware, product or
+      service;
+   d) use the source code, graphics or other parts of the Software in another
+      product or project;
+   e) remove or alter copyright, authorship or license notices;
+   f) use the name "SV Launcher", the author's name or the Software's logo to
+      identify, endorse or promote anything other than the unmodified Software.
+
+   The rights that the terms of service of the hosting platform require every
+   user to have with respect to a public repository (such as viewing it and
+   forking it on that platform) are not restricted by this license. Such a fork
+   remains subject to this license and gives no additional rights.
+
+3. Additional licenses
+
+   To request permission for any use outside section 1, contact the author:
+   smrnw, https://github.com/Smrnw. Permission is valid only if given in writing
+   and only for what it explicitly covers.
+
+4. Ownership
+
+   The Software is licensed, not sold. The author retains all rights not
+   expressly granted here. Contributions you submit to the author's repository
+   may be used by the author as part of the Software under this or any other
+   license, without obligation to you.
+
+5. Termination
+
+   Your rights under this license end automatically if you breach any of its
+   terms. When that happens you must stop using the Software and delete all
+   copies in your possession.
+
+6. No warranty
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+
+7. Limitation of liability
+
+   TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL THE AUTHOR BE LIABLE
+   FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+   TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+   THE USE OF OR OTHER DEALINGS IN THE SOFTWARE.
+
+8. Third-party content
+
+   This license does not cover wallpaper images or applications displayed by the
+   Software. They belong to their respective owners and are subject to their own
+   terms.
+
+9. Language
+
+   The English text above is the governing version. The Russian text below is a
+   translation provided for convenience.
+
+
+================================================================================
+
+Лицензия SV Launcher для личного использования, версия 1.0
+(перевод; преимущественную силу имеет английский текст выше)
+
+© 2026 smrnw. Все права защищены.
+
+Лицензия распространяется на SV Launcher: исходный код, файлы сборки,
+документацию, графику и собранные из них пакеты приложения (далее — «Программа»).
+
+1. Разрешённое использование
+
+   Вы вправе бесплатно и исключительно в личных некоммерческих целях:
+
+   а) скачивать, устанавливать и запускать Программу на устройствах, которые
+      принадлежат лично вам или которыми вы пользуетесь дома;
+   б) изучать исходный код и собирать из него Программу для использования,
+      указанного в пункте (а);
+   в) изменять Программу для использования, указанного в пункте (а), при
+      условии, что изменённая версия остаётся только у вас.
+
+2. Всё остальное требует отдельной лицензии
+
+   Любое использование, прямо не разрешённое разделом 1, допускается только с
+   предварительного письменного разрешения (дополнительной лицензии) автора.
+   Без него, в частности, запрещается:
+
+   а) использовать Программу или её части в коммерческих целях либо в
+      деятельности любой компании, организации или учреждения;
+   б) распространять, публиковать, продавать, сдавать в прокат или аренду,
+      сублицензировать либо иным образом передавать кому-либо Программу или её
+      изменённые версии — в виде исходного кода или в собранном виде, в том
+      числе через магазины приложений, сайты, файлообменники и мессенджеры;
+   в) предустанавливать Программу на устройства или включать её в состав
+      прошивок, продуктов и сервисов;
+   г) использовать исходный код, графику и другие части Программы в других
+      продуктах и проектах;
+   д) удалять или изменять сведения об авторских правах, авторстве и лицензии;
+   е) использовать название «SV Launcher», имя автора или логотип Программы для
+      обозначения, поддержки или продвижения чего-либо, кроме неизменённой
+      Программы.
+
+   Права, которые по условиям площадки размещения должны быть у каждого её
+   пользователя в отношении публичного репозитория (например, просмотр и
+   создание ответвления на этой площадке), настоящей лицензией не
+   ограничиваются. На такое ответвление распространяется настоящая лицензия,
+   и дополнительных прав оно не даёт.
+
+3. Дополнительные лицензии
+
+   За разрешением на использование за пределами раздела 1 обращайтесь к автору:
+   smrnw, https://github.com/Smrnw. Разрешение действительно только в
+   письменной форме и только в том объёме, который в нём прямо указан.
+
+4. Права на Программу
+
+   Программа предоставляется по лицензии, а не продаётся. Все права, прямо не
+   предоставленные настоящей лицензией, сохраняются за автором. Изменения,
+   которые вы предлагаете в репозиторий автора, автор вправе использовать в
+   составе Программы на условиях этой или любой другой лицензии без каких-либо
+   обязательств перед вами.
+
+5. Прекращение действия
+
+   Ваши права по настоящей лицензии автоматически прекращаются при нарушении
+   любого из её условий. В этом случае вы обязаны прекратить использование
+   Программы и удалить все имеющиеся у вас копии.
+
+6. Отсутствие гарантий
+
+   Программа предоставляется «как есть», без каких-либо гарантий, явных или
+   подразумеваемых, включая гарантии товарной пригодности, соответствия
+   определённой цели и ненарушения прав.
+
+7. Ограничение ответственности
+
+   В максимальной степени, допускаемой законом, автор не несёт ответственности
+   по каким-либо требованиям, за убытки или иной ущерб, возникшие в связи с
+   Программой, её использованием или иными действиями с ней.
+
+8. Содержимое третьих лиц
+
+   Лицензия не распространяется на изображения обоев и на приложения, которые
+   отображает Программа. Они принадлежат своим правообладателям и используются
+   на их условиях.

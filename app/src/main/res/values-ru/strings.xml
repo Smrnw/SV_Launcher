@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Домашний экран -->
+    <string name="favorites_title">Избранное</string>
+    <string name="favorites_empty">Удерживайте OK на приложении и выберите «Закрепить в избранном», чтобы добавить его сюда</string>
+    <string name="menu_pin">Закрепить в избранном</string>
+    <string name="menu_unpin">Открепить</string>
+    <string name="menu_move_left">Сдвинуть влево</string>
+    <string name="menu_move_right">Сдвинуть вправо</string>
+    <string name="menu_hide">Скрыть</string>
+    <string name="menu_info">О приложении</string>
+    <string name="hidden_hint">Скрыто. Вернуть: настройки лаунчера → Скрытые приложения</string>
+    <string name="cant_open">Не удалось открыть</string>
+
+    <!-- Строка состояния -->
+    <string name="net_none">Нет сети</string>
+    <string name="net_other">Сеть</string>
+    <string name="unit_kbps">%s Кбит/с</string>
+    <string name="unit_mbps">%s Мбит/с</string>
+    <string name="stat_cpu">ЦП %d%%</string>
+    <string name="stat_cpu_estimate">ЦП ~%d%%</string>
+    <string name="stat_ram">ОЗУ %1$s / %2$s ГБ</string>
+
+    <!-- Мастер первого запуска -->
+    <string name="setup_step">Шаг %1$d из %2$d</string>
+    <string name="setup_back">Назад</string>
+    <string name="setup_next">Далее</string>
+    <string name="setup_finish">Готово</string>
+    <string name="setup_welcome_title">Добро пожаловать в SV Launcher</string>
+    <string name="setup_welcome_text">Лёгкий домашний экран для телевизора: избранное, все приложения и сменные обои.\n\nНастройка займёт около минуты. Любой шаг можно пропустить кнопкой «Далее», а всё выбранное — изменить позже в настройках лаунчера.</string>
+    <string name="setup_default_title">Сделать лаунчером по умолчанию</string>
+    <string name="setup_default_text">Сначала выберите SV Launcher в системном списке домашних экранов. Если после этого кнопка «Домой» всё равно открывает стандартный экран (так бывает на Google TV), включите ещё службу SV Launcher в специальных возможностях.\n\nСлужба реагирует только на кнопку «Домой». Она не читает экран и не собирает данные.</string>
+    <string name="setup_wallpaper_title">Обои</string>
+    <string name="setup_wallpaper_text">Выберите, откуда брать фоновые изображения. Интернет использует только облачная подборка; тему для неё можно выбрать позже в настройках.</string>
+    <string name="setup_wallpaper_builtin">Встроенные обои</string>
+    <string name="setup_wallpaper_builtin_summary">Изображения, которые входят в приложение. Из сети ничего не загружается</string>
+    <string name="setup_wallpaper_cloud">Облачная подборка</string>
+    <string name="setup_wallpaper_cloud_summary">Тематические подборки из интернета, со временем пополняются</string>
+    <string name="setup_wallpaper_own">Свои изображения</string>
+    <string name="setup_wallpaper_own_summary">Добавьте их позже в настройках. Из сети ничего не загружается</string>
+    <string name="setup_wallpaper_off">Без обоев</string>
+    <string name="setup_wallpaper_off_summary">Спокойный тёмный фон. Из сети ничего не загружается</string>
+    <string name="setup_stats_title">Показатели системы</string>
+    <string name="setup_stats_text">Строка состояния под датой. Нажмите на пункт, чтобы включить или выключить его.</string>
+    <string name="setup_shown">Показывается</string>
+    <string name="setup_not_shown">Не показывается</string>
+    <string name="setup_done_title">Всё готово</string>
+    <string name="setup_done_text">Удерживайте OK на приложении, чтобы открыть его меню: закрепить в избранном, передвинуть или скрыть.\n\nИзбранное находится на отдельной панели над списком и листается в стороны.\n\nШестерёнка в правом верхнем углу открывает настройки лаунчера.</string>
+
+    <!-- Настройки. Названия и состояния должны умещаться в одну строку боковой панели. -->
+    <string name="settings">Настройки лаунчера</string>
+    <string name="settings_page">Настройки</string>
+    <string name="default_title">Лаунчер по умолчанию</string>
+    <string name="cat_wallpaper">Обои</string>
+    <string name="cat_home">Главный экран</string>
+    <string name="cat_apps">Приложения</string>
+    <string name="default_system">Выбран в системе</string>
+    <string name="default_service">Служба включена</string>
+    <string name="default_none">Не настроен</string>
+    <string name="role_title">Выбрать в системе</string>
+    <string name="role_on">Выбран</string>
+    <string name="role_off">Не выбран</string>
+    <string name="role_missing">На этом телевизоре нет системного выбора домашнего экрана. Используйте службу кнопки «Домой»</string>
+    <string name="service_title">Служба кнопки «Домой»</string>
+    <string name="service_on">Включена</string>
+    <string name="service_off">Выключена</string>
+    <string name="service_manual">Этот телевизор не даёт приложениям открывать специальные возможности напрямую. Включите службу вручную:\n\n1. Нажмите «Открыть настройки».\n2. Перейдите в «Настройки устройства» → «Специальные возможности».\n3. Выберите «SV Launcher» и включите.\n\nЕсли SV Launcher уже выбран в системе и кнопка «Домой» открывает его, служба не нужна.</string>
+    <string name="service_open_settings">Открыть настройки</string>
+    <string name="own_pick_title">Изображения на телевизоре</string>
+    <string name="own_pick_add">Добавить</string>
+    <string name="own_none_found">На телевизоре и флешках изображения не найдены. Скопируйте их в эту папку и выберите источник «Свои изображения»:</string>
+    <string name="own_no_access">Без доступа к изображениям добавить их можно только через эту папку:</string>
+    <string name="source_title">Источник обоев</string>
+    <string name="source_builtin">Встроенные</string>
+    <string name="source_cloud">Облачная подборка</string>
+    <string name="source_own">Свои изображения</string>
+    <string name="source_off">Без обоев</string>
+    <string name="theme_title">Тема обоев</string>
+    <string name="theme_all">Вся тема (%d)</string>
+    <string name="theme_loading">Загружаю темы…</string>
+    <string name="theme_failed">Не удалось получить темы. Проверьте подключение к интернету</string>
+    <string name="theme_empty">В облачной подборке пока нет тем</string>
+    <string name="own_add_title">Добавить свои обои</string>
+    <string name="own_count">Изображений: %d</string>
+    <string name="own_added">Добавлено: %d. Свои обои включены</string>
+    <string name="own_failed">Ничего не добавлено. Поддерживаются JPEG, PNG и WebP</string>
+    <string name="own_clear_title">Удалить свои обои</string>
+    <string name="own_clear_summary">Только добавленные здесь</string>
+    <string name="own_cleared">Добавленные обои удалены</string>
+    <string name="refresh_title">Обновить обои</string>
+    <string name="refresh_summary">Проверить облако сейчас</string>
+    <string name="refresh_started">Проверяю обои…</string>
+    <string name="stats_title">Показатели системы</string>
+    <string name="stats_off">Выключены</string>
+    <string name="stats_dialog_title">Показывать на домашнем экране</string>
+    <string name="stats_net">Сеть и скорость</string>
+    <string name="stats_cpu">Нагрузка на процессор</string>
+    <string name="stats_ram">Занятая оперативная память</string>
+    <string name="stats_net_short">Сеть</string>
+    <string name="stats_cpu_short">ЦП</string>
+    <string name="stats_ram_short">ОЗУ</string>
+    <string name="nav_sound_title">Звук навигации</string>
+    <string name="nav_sound_on">Включён</string>
+    <string name="nav_sound_off">Выключен</string>
+    <string name="hidden_title">Скрытые приложения</string>
+    <string name="hidden_summary">Скрыто: %d</string>
+    <string name="hidden_dialog_title">Снимите отметку, чтобы показать</string>
+    <string name="hidden_empty">Скрытых приложений нет. Чтобы скрыть приложение, удерживайте на нём OK на домашнем экране</string>
+    <string name="setup_again_title">Начальная настройка</string>
+    <string name="setup_again_summary">Пройти заново</string>
+    <string name="system_title">Настройки системы</string>
+    <string name="system_summary">Настройки телевизора</string>
+    <string name="version">Версия %s</string>
+
+    <string name="a11y_description">Открывает SV Launcher вместо стандартного рабочего стола по нажатию кнопки «Домой». Служба реагирует только на кнопку «Домой» и на появление стандартного лаунчера на экране. Она не читает содержимое экрана и не собирает никаких данных.</string>
+</resources>

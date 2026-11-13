@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The logo tile: graphite with a faint light rim. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="24dp" />
+    <solid android:color="@color/logo_tile" />
+    <stroke
+        android:width="2dp"
+        android:color="#33FFFFFF" />
+</shape>

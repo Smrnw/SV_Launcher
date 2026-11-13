@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">SV Launcher</string>
+
+    <!-- Home screen -->
+    <string name="favorites_title">Favorites</string>
+    <string name="favorites_empty">Hold OK on an app and choose “Pin to favorites” to add it here</string>
+    <string name="menu_pin">Pin to favorites</string>
+    <string name="menu_unpin">Unpin</string>
+    <string name="menu_move_left">Move left</string>
+    <string name="menu_move_right">Move right</string>
+    <string name="menu_hide">Hide</string>
+    <string name="menu_info">App info</string>
+    <string name="hidden_hint">Hidden. To bring it back: launcher settings → Hidden apps</string>
+    <string name="cant_open">Unable to open</string>
+
+    <!-- Status line -->
+    <string name="net_none">Offline</string>
+    <string name="net_other">Online</string>
+    <string name="unit_kbps">%s kbit/s</string>
+    <string name="unit_mbps">%s Mbit/s</string>
+    <string name="stat_cpu">CPU %d%%</string>
+    <string name="stat_cpu_estimate">CPU ~%d%%</string>
+    <string name="stat_ram">RAM %1$s / %2$s GB</string>
+
+    <!-- First-start wizard -->
+    <string name="setup_step">Step %1$d of %2$d</string>
+    <string name="setup_back">Back</string>
+    <string name="setup_next">Next</string>
+    <string name="setup_finish">Done</string>
+    <string name="setup_mark_on" translatable="false">●</string>
+    <string name="setup_mark_off" translatable="false">○</string>
+    <string name="setup_welcome_title">Welcome to SV Launcher</string>
+    <string name="setup_welcome_text">A light home screen for your TV: favorites, all your apps and changing wallpapers.\n\nSetup takes about a minute. Any step can be skipped with “Next”, and everything can be changed later in the launcher settings.</string>
+    <string name="setup_default_title">Make it the default launcher</string>
+    <string name="setup_default_text">First choose SV Launcher in the system list of home screens. If the Home button still opens the stock screen after that (this happens on Google TV), also turn on the SV Launcher service in the accessibility settings.\n\nThe service only reacts to the Home button. It does not read the screen and collects no data.</string>
+    <string name="setup_wallpaper_title">Wallpapers</string>
+    <string name="setup_wallpaper_text">Choose where the background images come from. Only the cloud collection uses the internet; a theme for it can be picked later in the settings.</string>
+    <string name="setup_wallpaper_builtin">Built-in wallpapers</string>
+    <string name="setup_wallpaper_builtin_summary">Images that come with the app. Nothing is downloaded</string>
+    <string name="setup_wallpaper_cloud">Cloud collection</string>
+    <string name="setup_wallpaper_cloud_summary">Themed collections from the internet, updated over time</string>
+    <string name="setup_wallpaper_own">My own images</string>
+    <string name="setup_wallpaper_own_summary">Add them later in the settings. Nothing is downloaded</string>
+    <string name="setup_wallpaper_off">No wallpaper</string>
+    <string name="setup_wallpaper_off_summary">A plain dark background. Nothing is downloaded</string>
+    <string name="setup_stats_title">System indicators</string>
+    <string name="setup_stats_text">A status line under the date. Press an item to turn it on or off.</string>
+    <string name="setup_shown">Shown</string>
+    <string name="setup_not_shown">Not shown</string>
+    <string name="setup_done_title">Everything is ready</string>
+    <string name="setup_done_text">Hold OK on an app to open its menu: pin it to favorites, move it or hide it.\n\nFavorites live on their own panel above the list and scroll sideways.\n\nThe gear in the top right corner opens the launcher settings.</string>
+
+    <!-- Settings. Titles and states must fit on one line of the side panel. -->
+    <string name="settings">Launcher settings</string>
+    <string name="settings_page">Settings</string>
+    <string name="default_title">Default launcher</string>
+    <string name="cat_wallpaper">Wallpapers</string>
+    <string name="cat_home">Home screen</string>
+    <string name="cat_apps">Apps</string>
+    <string name="default_system">Chosen in the system</string>
+    <string name="default_service">Service is on</string>
+    <string name="default_none">Not set up</string>
+    <string name="role_title">Choose in the system</string>
+    <string name="role_on">Chosen</string>
+    <string name="role_off">Not chosen</string>
+    <string name="role_missing">This TV has no system choice of the home screen. Use the Home button service</string>
+    <string name="service_title">Home button service</string>
+    <string name="service_on">On</string>
+    <string name="service_off">Off</string>
+    <string name="service_manual">This TV does not let apps open its accessibility settings directly. Turn the service on by hand:\n\n1. Press “Open settings”.\n2. Go to Device Preferences → Accessibility.\n3. Choose “SV Launcher” and turn it on.\n\nIf SV Launcher is already chosen in the system and the Home button opens it, the service is not needed.</string>
+    <string name="service_open_settings">Open settings</string>
+    <string name="own_pick_title">Images on the TV</string>
+    <string name="own_pick_add">Add</string>
+    <string name="own_none_found">No images were found on the TV or on USB drives. Copy them to this folder and choose “My own images” as the source:</string>
+    <string name="own_no_access">Without access to images they can only be added through this folder:</string>
+    <string name="source_title">Wallpaper source</string>
+    <string name="source_builtin">Built-in</string>
+    <string name="source_cloud">Cloud collection</string>
+    <string name="source_own">My own images</string>
+    <string name="source_off">No wallpaper</string>
+    <string name="theme_title">Wallpaper theme</string>
+    <string name="theme_all">Whole theme (%d)</string>
+    <string name="theme_loading">Loading themes…</string>
+    <string name="theme_failed">Could not get the themes. Check the internet connection</string>
+    <string name="theme_empty">The cloud collection has no themes yet</string>
+    <string name="own_add_title">Add my wallpapers</string>
+    <string name="own_count">Images: %d</string>
+    <string name="own_added">Added: %d. Own wallpapers are now on</string>
+    <string name="own_failed">Nothing was added. Supported formats: JPEG, PNG, WebP</string>
+    <string name="own_clear_title">Remove my wallpapers</string>
+    <string name="own_clear_summary">Only those added here</string>
+    <string name="own_cleared">Added wallpapers removed</string>
+    <string name="refresh_title">Refresh wallpapers</string>
+    <string name="refresh_summary">Check the cloud now</string>
+    <string name="refresh_started">Checking for wallpapers…</string>
+    <string name="stats_title">System indicators</string>
+    <string name="stats_off">Off</string>
+    <string name="stats_dialog_title">Show on the home screen</string>
+    <string name="stats_net">Network and speed</string>
+    <string name="stats_cpu">CPU load</string>
+    <string name="stats_ram">Memory in use</string>
+    <string name="stats_net_short">Network</string>
+    <string name="stats_cpu_short">CPU</string>
+    <string name="stats_ram_short">RAM</string>
+    <string name="nav_sound_title">Navigation sound</string>
+    <string name="nav_sound_on">On</string>
+    <string name="nav_sound_off">Off</string>
+    <string name="hidden_title">Hidden apps</string>
+    <string name="hidden_summary">Hidden: %d</string>
+    <string name="hidden_dialog_title">Uncheck to show again</string>
+    <string name="hidden_empty">No hidden apps. To hide one, hold OK on it on the home screen</string>
+    <string name="setup_again_title">Setup wizard</string>
+    <string name="setup_again_summary">Run it again</string>
+    <string name="system_title">System settings</string>
+    <string name="system_summary">TV settings</string>
+    <string name="version">Version %s</string>
+
+    <string name="a11y_description">Opens SV Launcher instead of the stock home screen when you press Home. The service only reacts to the Home button and to the stock launcher appearing on screen. It does not read screen content and does not collect any data.</string>
+</resources>

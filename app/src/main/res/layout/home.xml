@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.smrnw.svlauncher.WallpaperView
+        android:id="@+id/wallpaper"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="@dimen/grid_pad"
+        android:layout_marginTop="26dp"
+        android:orientation="vertical">
+
+        <TextClock
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:format12Hour="EEEE, d MMMM"
+            android:format24Hour="EEEE, d MMMM"
+            android:shadowColor="#80000000"
+            android:shadowRadius="6"
+            android:textColor="@color/text_dim"
+            android:textSize="15sp" />
+
+        <!-- Optional system indicators, see SystemStats. -->
+        <TextView
+            android:id="@+id/stats"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:shadowColor="#80000000"
+            android:shadowRadius="6"
+            android:singleLine="true"
+            android:textColor="@color/text_dim"
+            android:textSize="11sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="22dp"
+        android:layout_marginEnd="@dimen/grid_pad"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextClock
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-light"
+            android:format12Hour="h:mm"
+            android:format24Hour="H:mm"
+            android:shadowColor="#80000000"
+            android:shadowRadius="6"
+            android:textColor="@color/text"
+            android:textSize="26sp" />
+
+        <ImageView
+            android:id="@+id/settings"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="14dp"
+            android:background="@drawable/round_focus"
+            android:clickable="true"
+            android:contentDescription="@string/settings"
+            android:focusable="true"
+            android:padding="8dp"
+            android:src="@drawable/ic_settings" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical">
+
+        <!-- Favorites: a matte panel of fixed size with its title and one row that
+             scrolls sideways only. While nothing is pinned it shows a hint instead,
+             so the layout never jumps. The paddings leave room for the focused card
+             to grow. -->
+        <LinearLayout
+            android:id="@+id/favorites"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/panel_margin"
+            android:layout_marginEnd="@dimen/panel_margin"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/panel"
+            android:orientation="vertical"
+            android:paddingTop="10dp"
+            android:paddingBottom="6dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/panel_pad"
+                android:singleLine="true"
+                android:text="@string/favorites_title"
+                android:textColor="@color/text_dim"
+                android:textSize="13sp" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <HorizontalScrollView
+                    android:id="@+id/favorites_scroll"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:overScrollMode="never"
+                    android:paddingStart="@dimen/panel_pad"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="@dimen/panel_pad"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/favorites_row"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:clipChildren="false"
+                        android:clipToPadding="false"
+                        android:orientation="horizontal" />
+                </HorizontalScrollView>
+
+                <TextView
+                    android:id="@+id/favorites_empty"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:paddingStart="@dimen/panel_pad"
+                    android:paddingEnd="@dimen/panel_pad"
+                    android:text="@string/favorites_empty"
+                    android:textColor="@color/text_dim"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- The parent clips the grid to its own box, so rows that scroll up never
+             run over what is above. Inside the box nothing is clipped: the focused
+             card needs room to grow, hence the paddings with clipToPadding="false". -->
+        <GridView
+            android:id="@+id/grid"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/grid_height_short"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:horizontalSpacing="@dimen/grid_gap"
+            android:listSelector="@android:color/transparent"
+            android:nextFocusLeft="@id/grid"
+            android:nextFocusRight="@id/grid"
+            android:numColumns="@integer/grid_columns"
+            android:overScrollMode="never"
+            android:paddingStart="@dimen/grid_pad"
+            android:paddingTop="16dp"
+            android:paddingEnd="@dimen/grid_pad"
+            android:paddingBottom="24dp"
+            android:scrollbars="none"
+            android:stretchMode="columnWidth"
+            android:verticalSpacing="10dp" />
+    </LinearLayout>
+</FrameLayout>

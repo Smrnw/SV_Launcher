@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Matte plate behind the favorites: a faint light fill and a barely visible rim.
+     A plain translucent shape, no blur: blurring the wallpaper behind it would cost
+     GPU time on every frame. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="18dp" />
+    <solid android:color="#26FFFFFF" />
+    <stroke
+        android:width="1dp"
+        android:color="#33FFFFFF" />
+</shape>

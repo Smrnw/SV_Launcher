@@ -1,0 +1,62 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Optional release signing: put keystore.properties next to settings.gradle with
+// storeFile, storePassword, keyAlias, keyPassword. Without it the release build
+// is signed with the local debug key so that it can still be installed.
+def keystoreFile = rootProject.file('keystore.properties')
+def keystore = new Properties()
+if (keystoreFile.exists()) {
+    keystoreFile.withInputStream { keystore.load(it) }
+}
+
+android {
+    namespace 'com.smrnw.svlauncher'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.smrnw.svlauncher'
+        minSdk 21
+        targetSdk 34
+        versionCode 101
+        versionName '1.0.0'
+    }
+
+    signingConfigs {
+        if (keystoreFile.exists()) {
+            release {
+                storeFile rootProject.file(keystore['storeFile'])
+                storePassword keystore['storePassword']
+                keyAlias keystore['keyAlias']
+                keyPassword keystore['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig keystoreFile.exists() ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+
+    dependenciesInfo {
+        includeInApk false
+        includeInBundle false
+    }
+}
+
+// No dependencies on purpose: the launcher uses platform APIs only.

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Background of the settings panel: opaque graphite with a hairline on the
+     side that faces the home screen. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape>
+            <solid android:color="@color/surface" />
+        </shape>
+    </item>
+    <item
+        android:width="1dp"
+        android:gravity="start|fill_vertical">
+        <shape>
+            <solid android:color="#1FFFFFFF" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#FF16181C</color>
+    <color name="card">#FF2A2D33</color>
+    <color name="text">#FFFFFFFF</color>
+    <color name="text_dim">#B3FFFFFF</color>
+    <!-- Panels and dialogs: graphite in two shades. No accent colour on purpose. -->
+    <color name="surface">#FF15171D</color>
+    <color name="surface_high">#FF1F2228</color>
+    <color name="logo_tile">#FF24272D</color>
+
+    <dimen name="grid_pad">48dp</dimen>
+    <dimen name="grid_gap">20dp</dimen>
+    <!-- Grid height under the favorites panel. -->
+    <dimen name="grid_height_short">236dp</dimen>
+    <!-- panel_margin + panel_pad = grid_pad: favorites line up with the grid. -->
+    <dimen name="panel_margin">34dp</dimen>
+    <dimen name="panel_pad">14dp</dimen>
+    <!-- Under a favorites card: the gap and one line of its label. -->
+    <dimen name="favorites_label_space">34dp</dimen>
+    <dimen name="side_panel_width">340dp</dimen>
+    <dimen name="card_radius">10dp</dimen>
+    <dimen name="focus_z">12dp</dimen>
+    <integer name="grid_columns">5</integer>
+
+    <style name="Theme.SV" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:colorAccent">@color/text</item>
+        <item name="android:alertDialogTheme">@style/Theme.SV.Dialog</item>
+    </style>
+
+    <!-- Dialogs: a graphite card, white marks and buttons. -->
+    <style name="Theme.SV.Dialog" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/dialog_bg</item>
+        <item name="android:colorBackground">@color/surface_high</item>
+        <item name="android:colorAccent">@color/text</item>
+        <item name="android:textColorPrimary">@color/text</item>
+        <item name="android:textColorSecondary">@color/text_dim</item>
+    </style>
+
+    <style name="Theme.SV.Home">
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
+    <!-- Settings: a panel docked to the right over the dimmed home screen. -->
+    <style name="Theme.SV.Panel">
+        <item name="android:windowIsTranslucent">true</item>
+        <!-- The panel paints its own background (see settings.xml): a translucent
+             window does not reliably draw a window background on every TV. -->
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.35</item>
+        <item name="android:windowAnimationStyle">@style/PanelAnimation</item>
+    </style>
+
+    <style name="PanelAnimation">
+        <item name="android:activityOpenEnterAnimation">@anim/panel_in</item>
+        <item name="android:activityOpenExitAnimation">@null</item>
+        <item name="android:activityCloseEnterAnimation">@null</item>
+        <item name="android:activityCloseExitAnimation">@anim/panel_out</item>
+    </style>
+
+    <style name="Row">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">6dp</item>
+        <item name="android:background">@drawable/row_bg</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingBottom">10dp</item>
+    </style>
+
+    <style name="SetupButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/button_bg</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:minWidth">120dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
+        <item name="android:paddingTop">11dp</item>
+        <item name="android:paddingBottom">11dp</item>
+        <item name="android:textColor">@color/row_content</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="RowTitle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/row_content</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:duplicateParentState">true</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <style name="RowSummary">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">2dp</item>
+        <item name="android:textColor">@color/row_summary</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:duplicateParentState">true</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+</resources>
