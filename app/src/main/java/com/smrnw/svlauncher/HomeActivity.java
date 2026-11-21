@@ -1,12 +1,17 @@
 package com.smrnw.svlauncher;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
 import android.graphics.Bitmap;
+import android.media.tv.TvContract;
+import android.media.tv.TvInputInfo;
+import android.media.tv.TvInputManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -18,16 +23,22 @@ import android.view.SoundEffectConstants;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
+import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Locale;
 
 /**
  * The home screen: wallpaper, clock, status line, a row of favorites on its own
@@ -53,8 +64,8 @@ public final class HomeActivity extends Activity implements
     private static final int ACTION_HIDE = 4;
     private static final int ACTION_INFO = 5;
 
-    /** Rendered cards, capped by count. Only cards that were actually shown get here. */
-    private final LruCache<String, Bitmap> cards = new LruCache<>(64);
+    /** Rendered cards have a byte budget so large banners cannot crowd out the UI. */
+    private LruCache<String, Bitmap> cards;
     private final HashSet<String> pending = new HashSet<>();
     private final AppAdapter adapter = new AppAdapter();
 
@@ -73,6 +84,7 @@ public final class HomeActivity extends Activity implements
     private View favoritesPanel;
     private LinearLayout favoritesRow;
     private View favoritesEmpty;
+    private HorizontalScrollView favoritesScroll;
     private GridView grid;
     private TextView statsView;
     private SystemStats stats;
@@ -91,6 +103,7 @@ public final class HomeActivity extends Activity implements
     private boolean started;
     private boolean destroyed;
     private boolean wallpaperBusy;
+    private boolean cardsDropped;
     /** False until the focus has been put on the first app after the apps loaded. */
     private boolean focusPlaced;
     private String wallpaperPath;
@@ -158,6 +171,15 @@ public final class HomeActivity extends Activity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.home);
+        ActivityManager activityManager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+        int memoryBudget = Math.max(2 * 1024 * 1024,
+                Math.min(8 * 1024 * 1024, activityManager.getMemoryClass() * 1024 * 1024 / 32));
+        cards = new LruCache<String, Bitmap>(memoryBudget) {
+            @Override
+            protected int sizeOf(String key, Bitmap value) {
+                return value.getByteCount();
+            }
+        };
         // The wallpaper view paints the whole screen itself. Without a window
         // background no pixel is drawn twice.
         getWindow().setBackgroundDrawable(null);
@@ -179,6 +201,9 @@ public final class HomeActivity extends Activity implements
         favoritesPanel = findViewById(R.id.favorites);
         favoritesRow = findViewById(R.id.favorites_row);
         favoritesEmpty = findViewById(R.id.favorites_empty);
+        favoritesScroll = findViewById(R.id.favorites_scroll);
+        ((WatchableHorizontalScrollView) favoritesScroll).setScrollListener(
+                this::loadVisibleFavoriteCards);
         // The panel keeps its height when empty: one card plus its label.
         findViewById(R.id.favorites_scroll).setMinimumHeight(
                 cardH + getResources().getDimensionPixelSize(R.dimen.favorites_label_space));
@@ -196,6 +221,7 @@ public final class HomeActivity extends Activity implements
 
         findViewById(R.id.settings).setOnClickListener(
                 v -> startActivity(new Intent(this, SettingsActivity.class)));
+        findViewById(R.id.input_sources).setOnClickListener(v -> showInputSources());
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_PACKAGE_ADDED);
@@ -218,6 +244,11 @@ public final class HomeActivity extends Activity implements
     protected void onStart() {
         super.onStart();
         started = true;
+        if (cardsDropped) {
+            cardsDropped = false;
+            adapter.notifyDataSetChanged();
+            loadVisibleFavoriteCards();
+        }
         // Settings may have unhidden apps or switched the wallpaper source meanwhile.
         if (prefsRevision != Prefs.revision) {
             readPrefs();
@@ -319,7 +350,20 @@ public final class HomeActivity extends Activity implements
         }
         if (level >= TRIM_MEMORY_BACKGROUND
                 || (level >= TRIM_MEMORY_RUNNING_LOW && level < TRIM_MEMORY_UI_HIDDEN)) {
+            clearCardViews();
             cards.evictAll();
+            cardsDropped = true;
+        }
+    }
+
+    private void clearCardViews() {
+        for (int i = 0; i < favoritesRow.getChildCount(); i++) {
+            Holder holder = (Holder) favoritesRow.getChildAt(i).getTag();
+            holder.card.setImageDrawable(null);
+        }
+        for (int i = 0; i < grid.getChildCount(); i++) {
+            Object tag = grid.getChildAt(i).getTag();
+            if (tag instanceof Holder) ((Holder) tag).card.setImageDrawable(null);
         }
     }
 
@@ -465,9 +509,7 @@ public final class HomeActivity extends Activity implements
             h.entry = entry;
             item.setTag(h);
             h.label.setText(entry.label);
-            Bitmap bitmap = cards.get(entry.pkg);
-            h.card.setImageBitmap(bitmap);
-            if (bitmap == null) requestCard(entry);
+            h.card.setImageBitmap(cards.get(entry.pkg));
 
             item.setId(View.generateViewId());
             item.setFocusable(true);
@@ -484,6 +526,26 @@ public final class HomeActivity extends Activity implements
             if (i == 0) item.setNextFocusLeftId(item.getId());
             if (i == n - 1) item.setNextFocusRightId(item.getId());
             favoritesRow.addView(item, params);
+        }
+        favoritesScroll.post(this::loadVisibleFavoriteCards);
+    }
+
+    /** Decode only favorite cards that can currently be seen on screen. */
+    private void loadVisibleFavoriteCards() {
+        if (favoritesScroll == null || favoritesRow == null) return;
+        int left = favoritesScroll.getScrollX();
+        int right = left + favoritesScroll.getWidth();
+        for (int i = 0; i < favoritesRow.getChildCount(); i++) {
+            View item = favoritesRow.getChildAt(i);
+            Holder holder = (Holder) item.getTag();
+            boolean visible = item.getRight() >= left && item.getLeft() <= right;
+            if (!visible) {
+                holder.card.setImageDrawable(null);
+                continue;
+            }
+            Bitmap bitmap = cards.get(holder.entry.pkg);
+            holder.card.setImageBitmap(bitmap);
+            if (bitmap == null) requestCard(holder.entry);
         }
     }
 
@@ -520,23 +582,157 @@ public final class HomeActivity extends Activity implements
             final Bitmap bitmap = Apps.card(app, entry, cardW, cardH);
             Worker.MAIN.post(() -> {
                 pending.remove(entry.pkg);
-                if (destroyed || bitmap == null) return;
+                if (destroyed || bitmap == null) {
+                    if (bitmap != null && !bitmap.isRecycled()) bitmap.recycle();
+                    return;
+                }
                 cards.put(entry.pkg, bitmap);
-                if (!showCard(favoritesRow, entry, bitmap)) showCard(grid, entry, bitmap);
+                showCard(favoritesRow, entry, bitmap);
+                showCard(grid, entry, bitmap);
             });
         });
     }
 
     /** Puts a freshly rendered card into the view that is waiting for it. */
     private static boolean showCard(ViewGroup parent, Apps.Entry entry, Bitmap bitmap) {
+        boolean favorites = parent.getId() == R.id.favorites_row;
+        HorizontalScrollView scroll = favorites && parent.getParent() instanceof HorizontalScrollView
+                ? (HorizontalScrollView) parent.getParent() : null;
+        int visibleLeft = scroll != null ? scroll.getScrollX() : 0;
+        int visibleRight = scroll != null ? visibleLeft + scroll.getWidth() : Integer.MAX_VALUE;
         for (int i = 0, n = parent.getChildCount(); i < n; i++) {
+            View item = parent.getChildAt(i);
             Holder h = (Holder) parent.getChildAt(i).getTag();
             if (h != null && h.entry == entry) {
-                h.card.setImageBitmap(bitmap);
+                if (!favorites || (item.getRight() >= visibleLeft && item.getLeft() <= visibleRight)) {
+                    h.card.setImageBitmap(bitmap);
+                }
                 return true;
             }
         }
         return false;
+    }
+
+    /** Opens the sources registered by this TV as a translucent horizontal tile row. */
+    private void showInputSources() {
+        TvInputManager manager = (TvInputManager) getSystemService(Context.TV_INPUT_SERVICE);
+        ArrayList<TvInputInfo> inputs = new ArrayList<>();
+        if (manager != null) {
+            for (TvInputInfo input : manager.getTvInputList()) {
+                android.content.pm.ServiceInfo service = input.getServiceInfo();
+                if (service == null || service.applicationInfo == null) continue;
+                int flags = service.applicationInfo.flags;
+                boolean systemInput = (flags & (ApplicationInfo.FLAG_SYSTEM
+                        | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+                boolean physicalInput = input.isPassthroughInput()
+                        || input.getType() == TvInputInfo.TYPE_TUNER;
+                // Apps can register TV channels too. Only built-in TV services own
+                // the physical ports that belong in this source picker.
+                if (systemInput && physicalInput) inputs.add(input);
+            }
+        }
+        // Input state is not reliable on every TV firmware. Keep this list neutral
+        // instead of presenting the last opened source as a physical connection.
+        Collections.sort(inputs, (a, b) -> {
+            int order = Integer.compare(inputOrder(a), inputOrder(b));
+            return order != 0 ? order : a.getId().compareTo(b.getId());
+        });
+        HashSet<String> seenLabels = new HashSet<>();
+        ArrayList<TvInputInfo> uniqueInputs = new ArrayList<>(inputs.size());
+        for (TvInputInfo input : inputs) {
+            String label = input.loadLabel(this).toString().trim().toLowerCase(Locale.ROOT);
+            if (seenLabels.add(label)) uniqueInputs.add(input);
+        }
+        inputs = uniqueInputs;
+        if (inputs.isEmpty()) {
+            Toast.makeText(this, R.string.inputs_unavailable, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        View panel = getLayoutInflater().inflate(R.layout.input_sources, null, false);
+        View appsContent = findViewById(R.id.apps_content);
+        LinearLayout tiles = panel.findViewById(R.id.input_tiles);
+        final AlertDialog[] dialogRef = new AlertDialog[1];
+        for (TvInputInfo input : inputs) {
+            View tile = getLayoutInflater().inflate(R.layout.input_tile, tiles, false);
+            ImageView icon = tile.findViewById(R.id.input_icon);
+            TextView label = tile.findViewById(R.id.input_label);
+            TextView state = tile.findViewById(R.id.input_state);
+            CharSequence title = input.loadLabel(this);
+            label.setText(title);
+            state.setText(R.string.input_source);
+            try {
+                String sourceName = title.toString().toLowerCase(Locale.ROOT);
+                int connectorIcon = sourceName.contains("hdmi") ? R.drawable.ic_hdmi_source
+                        : (sourceName.contains("displayport") || sourceName.matches("dp\\s*\\d*"))
+                        ? R.drawable.ic_displayport_source : 0;
+                android.graphics.drawable.Drawable inputIcon = connectorIcon == 0
+                        ? input.loadIcon(this) : null;
+                if (connectorIcon != 0) icon.setImageResource(connectorIcon);
+                if (inputIcon != null) icon.setImageDrawable(inputIcon);
+                else if (connectorIcon == 0) icon.setImageResource(input.isPassthroughInput()
+                            ? R.drawable.ic_input_source : R.drawable.ic_tv_source);
+            } catch (RuntimeException ignored) {
+                icon.setImageResource(input.isPassthroughInput()
+                        ? R.drawable.ic_input_source : R.drawable.ic_tv_source);
+            }
+            tile.setContentDescription(getString(R.string.input_tile_description, title));
+            tile.setOnClickListener(v -> {
+                if (dialogRef[0] != null) dialogRef[0].dismiss();
+                switchInput(input);
+            });
+            tiles.addView(tile);
+        }
+
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(panel).create();
+        dialogRef[0] = dialog;
+        dialog.setOnDismissListener(d -> appsContent.setVisibility(View.VISIBLE));
+        dialog.setOnShowListener(d -> {
+            Window window = dialog.getWindow();
+            if (window != null) {
+                window.setBackgroundDrawableResource(android.R.color.transparent);
+                window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+                WindowManager.LayoutParams params = window.getAttributes();
+                params.dimAmount = 0.28f;
+                window.setAttributes(params);
+                int margin = (int) (getResources().getDisplayMetrics().density * 64);
+                window.setLayout(Math.max(1, getResources().getDisplayMetrics().widthPixels - margin),
+                        WindowManager.LayoutParams.WRAP_CONTENT);
+            }
+            if (tiles.getChildCount() > 0) tiles.getChildAt(0).requestFocus();
+        });
+        appsContent.setVisibility(View.INVISIBLE);
+        dialog.show();
+    }
+
+    /** Keep source tiles in a familiar order instead of relying on vendor list order. */
+    private int inputOrder(TvInputInfo input) {
+        String label = input.loadLabel(this).toString().toLowerCase(Locale.ROOT);
+        if (label.contains("tuner") || label.contains("тюнер") || label.equals("tv")) return 0;
+        if (label.contains("hdmi")) {
+            int port = 0;
+            for (int i = label.indexOf("hdmi") + 4; i < label.length(); i++) {
+                char c = label.charAt(i);
+                if (c >= '0' && c <= '9') port = port * 10 + c - '0';
+                else if (port > 0) break;
+            }
+            return 10 + port;
+        }
+        if (label.contains("displayport") || label.equals("dp")) return 30;
+        if (label.equals("av") || label.startsWith("av ") || label.contains("composite")) return 40;
+        return 50;
+    }
+
+    /** Lets the system TV app open the passthrough source, such as HDMI. */
+    private void switchInput(TvInputInfo input) {
+        Uri uri = TvContract.buildChannelUriForPassthroughInput(input.getId());
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setDataAndType(uri, TvContract.Channels.CONTENT_ITEM_TYPE);
+        try {
+            startActivity(intent);
+        } catch (RuntimeException e) {
+            Toast.makeText(this, R.string.input_switch_failed, Toast.LENGTH_LONG).show();
+        }
     }
 
     private void open(Intent intent) {

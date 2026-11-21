@@ -61,6 +61,19 @@
             android:textSize="26sp" />
 
         <ImageView
+            android:id="@+id/input_sources"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/round_focus"
+            android:clickable="true"
+            android:contentDescription="@string/inputs_title"
+            android:focusable="true"
+            android:nextFocusRight="@id/settings"
+            android:padding="8dp"
+            android:src="@drawable/ic_input_source" />
+
+        <ImageView
             android:id="@+id/settings"
             android:layout_width="36dp"
             android:layout_height="36dp"
@@ -69,11 +82,13 @@
             android:clickable="true"
             android:contentDescription="@string/settings"
             android:focusable="true"
+            android:nextFocusLeft="@id/input_sources"
             android:padding="8dp"
             android:src="@drawable/ic_settings" />
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/apps_content"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
@@ -108,7 +123,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <HorizontalScrollView
+                <com.smrnw.svlauncher.WatchableHorizontalScrollView
                     android:id="@+id/favorites_scroll"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -127,7 +142,7 @@
                         android:clipChildren="false"
                         android:clipToPadding="false"
                         android:orientation="horizontal" />
-                </HorizontalScrollView>
+                </com.smrnw.svlauncher.WatchableHorizontalScrollView>
 
                 <TextView
                     android:id="@+id/favorites_empty"
@@ -156,6 +171,7 @@
             android:listSelector="@android:color/transparent"
             android:nextFocusLeft="@id/grid"
             android:nextFocusRight="@id/grid"
+            android:nextFocusUp="@id/input_sources"
             android:numColumns="@integer/grid_columns"
             android:overScrollMode="never"
             android:paddingStart="@dimen/grid_pad"
