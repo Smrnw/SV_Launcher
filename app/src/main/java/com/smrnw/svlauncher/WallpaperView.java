@@ -57,6 +57,17 @@ public final class WallpaperView extends View {
     /** Takes ownership of the bitmap and fades it in over the previous one. */
     void show(Bitmap bitmap) {
         fadeAnimator.cancel(); // finishes a running fade and frees its "previous"
+        long transitionLimit = Math.min(12L * 1024 * 1024,
+                Runtime.getRuntime().maxMemory() / 24);
+        if (current != null && current.getByteCount() + (long) bitmap.getByteCount() > transitionLimit) {
+            release(current);
+            release(previous);
+            current = bitmap;
+            previous = null;
+            fade = 1f;
+            invalidate();
+            return;
+        }
         previous = current;
         current = bitmap;
         fade = 0f;

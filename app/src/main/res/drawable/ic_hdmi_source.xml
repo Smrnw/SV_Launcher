@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="56dp" android:height="28dp"
+    android:viewportWidth="64" android:viewportHeight="32">
+    <!-- A clean port silhouette based on the supplied reference; the tile carries the HDMI label. -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M9,3H55c4,0 7,3 7,7v11c0,3 -2,5 -5,6l-6,4H13l-6,-4c-3,-1 -5,-3 -5,-6V10c0,-4 3,-7 7,-7z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineJoin="round"
+        android:strokeWidth="2.2" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,13H52V17H12z" />
+</vector>
