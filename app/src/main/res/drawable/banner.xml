@@ -9,9 +9,9 @@
             <solid android:color="@color/logo_tile" />
         </shape>
     </item>
+    <!-- 320x180 banner, a 180x180 mark in the middle (insets work on API 21). -->
     <item
-        android:width="180dp"
-        android:height="180dp"
         android:drawable="@drawable/logo_mark"
-        android:gravity="center" />
+        android:left="70dp"
+        android:right="70dp" />
 </layer-list>

@@ -1,6 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- DisplayPort socket, front view. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp" android:height="24dp"
-    android:viewportWidth="24" android:viewportHeight="24">
-    <path android:fillColor="#FFFFFFFF" android:pathData="M5,3h14v4h2v10h-6l-3,4H3V7h2zM10,17v4h4v-4z" />
+    android:width="64dp"
+    android:height="40dp"
+    android:viewportWidth="64"
+    android:viewportHeight="40">
+    <path
+        android:fillColor="#FF8E959F"
+        android:pathData="M5,7L59,7L59,33L13,33L5,25Z" />
+    <path
+        android:fillColor="#FFC3C9D2"
+        android:pathData="M6.5,8.5L57.5,8.5L57.5,31.5L13.6,31.5L6.5,24.4Z" />
+    <path
+        android:fillColor="#FFE9ECF1"
+        android:pathData="M6.5,8.5L57.5,8.5L57.5,10.5L6.5,10.5Z" />
+    <path
+        android:fillColor="#FF14171C"
+        android:pathData="M10,12L54,12L54,28.5L15,28.5L10,23.5Z" />
+    <path
+        android:fillColor="#FF2D323A"
+        android:pathData="M16,16L50,16L50,21.5L16,21.5Z" />
+    <path
+        android:fillColor="#FFD8B25A"
+        android:pathData="M17.16,16.8h1.98v2.4h-1.98zM20.46,16.8h1.98v2.4h-1.98zM23.76,16.8h1.98v2.4h-1.98zM27.06,16.8h1.98v2.4h-1.98zM30.36,16.8h1.98v2.4h-1.98zM33.66,16.8h1.98v2.4h-1.98zM36.96,16.8h1.98v2.4h-1.98zM40.26,16.8h1.98v2.4h-1.98zM43.56,16.8h1.98v2.4h-1.98zM46.86,16.8h1.98v2.4h-1.98z" />
+    <path
+        android:fillColor="#FFB8964A"
+        android:pathData="M18.1889,19.6h2.06667v1.4h-2.06667zM21.6333,19.6h2.06667v1.4h-2.06667zM25.0778,19.6h2.06667v1.4h-2.06667zM28.5222,19.6h2.06667v1.4h-2.06667zM31.9667,19.6h2.06667v1.4h-2.06667zM35.4111,19.6h2.06667v1.4h-2.06667zM38.8556,19.6h2.06667v1.4h-2.06667zM42.3,19.6h2.06667v1.4h-2.06667zM45.7444,19.6h2.06667v1.4h-2.06667z" />
 </vector>

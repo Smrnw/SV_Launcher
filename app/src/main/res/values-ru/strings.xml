@@ -50,10 +50,12 @@
     <!-- Настройки. Названия и состояния должны умещаться в одну строку боковой панели. -->
     <string name="settings">Настройки лаунчера</string>
     <string name="settings_page">Настройки</string>
-    <string name="inputs_title">Входы телевизора</string>
+    <string name="inputs_title">Источники сигнала</string>
     <string name="inputs_unavailable">Телевизор не предоставляет список входов приложениям</string>
-    <string name="input_selected">Подключен</string>
-    <string name="input_source">Вход</string>
+    <string name="input_title_tuner">TV</string>
+    <string name="input_state_active">Есть сигнал</string>
+    <string name="input_state_idle">Нет сигнала</string>
+    <string name="input_state_unplugged">Не подключено</string>
     <string name="input_tile_description">Переключить на %1$s</string>
     <string name="input_switch_failed">Телевизор не смог открыть этот вход</string>
     <string name="default_title">Лаунчер по умолчанию</string>

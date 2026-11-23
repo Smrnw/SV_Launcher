@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DVI socket, front view. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="40dp"
+    android:viewportWidth="64"
+    android:viewportHeight="40">
+    <path
+        android:fillColor="#FFB9BEC7"
+        android:pathData="M4,8L60,8L60,30L56,34L8,34L4,30Z" />
+    <path
+        android:fillColor="#FFEDEFF2"
+        android:pathData="M5.5,9.5L58.5,9.5L58.5,29.4L55.4,32.5L8.6,32.5L5.5,29.4Z" />
+    <path
+        android:fillColor="#FF14171C"
+        android:pathData="M10,13h2.2v2.2h-2.2zM14,13h2.2v2.2h-2.2zM18,13h2.2v2.2h-2.2zM22,13h2.2v2.2h-2.2zM26,13h2.2v2.2h-2.2zM30,13h2.2v2.2h-2.2zM34,13h2.2v2.2h-2.2zM38,13h2.2v2.2h-2.2zM10,18h2.2v2.2h-2.2zM14,18h2.2v2.2h-2.2zM18,18h2.2v2.2h-2.2zM22,18h2.2v2.2h-2.2zM26,18h2.2v2.2h-2.2zM30,18h2.2v2.2h-2.2zM34,18h2.2v2.2h-2.2zM38,18h2.2v2.2h-2.2zM10,23h2.2v2.2h-2.2zM14,23h2.2v2.2h-2.2zM18,23h2.2v2.2h-2.2zM22,23h2.2v2.2h-2.2zM26,23h2.2v2.2h-2.2zM30,23h2.2v2.2h-2.2zM34,23h2.2v2.2h-2.2zM38,23h2.2v2.2h-2.2z" />
+    <path
+        android:fillColor="#FF14171C"
+        android:pathData="M46,19h10v2h-10z" />
+    <path
+        android:fillColor="#FF14171C"
+        android:pathData="M48,14m-1,0a1,1 0 1,0 2,0a1,1 0 1,0 -2,0zM54,14m-1,0a1,1 0 1,0 2,0a1,1 0 1,0 -2,0zM48,26m-1,0a1,1 0 1,0 2,0a1,1 0 1,0 -2,0zM54,26m-1,0a1,1 0 1,0 2,0a1,1 0 1,0 -2,0z" />
+</vector>

@@ -7,9 +7,8 @@
             <solid android:color="@color/surface" />
         </shape>
     </item>
-    <item
-        android:width="1dp"
-        android:gravity="start|fill_vertical">
+    <!-- The hairline: everything but the first 1dp is inset away (works on API 21). -->
+    <item android:right="@dimen/side_panel_hairline_inset">
         <shape>
             <solid android:color="#1FFFFFFF" />
         </shape>

@@ -18,6 +18,8 @@
     <dimen name="panel_pad">14dp</dimen>
     <!-- Under a favorites card: the gap and one line of its label. -->
     <dimen name="favorites_label_space">34dp</dimen>
+    <!-- side_panel_width minus 1dp: what is left of the panel's edge line. -->
+    <dimen name="side_panel_hairline_inset">339dp</dimen>
     <dimen name="side_panel_width">340dp</dimen>
     <dimen name="card_radius">10dp</dimen>
     <dimen name="focus_z">12dp</dimen>

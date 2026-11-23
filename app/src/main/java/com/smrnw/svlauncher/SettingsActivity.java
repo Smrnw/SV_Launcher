@@ -371,16 +371,29 @@ public final class SettingsActivity extends Activity {
         pickFromMediaStore();
     }
 
-    private static String readImagesPermission() {
-        return Build.VERSION.SDK_INT >= 33
-                ? Manifest.permission.READ_MEDIA_IMAGES : Manifest.permission.READ_EXTERNAL_STORAGE;
+    /** The permissions that let the launcher list images; any one of them is enough. */
+    private static String[] readImagesPermissions() {
+        if (Build.VERSION.SDK_INT >= 34) {
+            // Android 14 lets the user share only some photos; that is fine too.
+            return new String[]{Manifest.permission.READ_MEDIA_IMAGES,
+                    "android.permission.READ_MEDIA_VISUAL_USER_SELECTED"};
+        }
+        return new String[]{Build.VERSION.SDK_INT >= 33
+                ? Manifest.permission.READ_MEDIA_IMAGES : Manifest.permission.READ_EXTERNAL_STORAGE};
+    }
+
+    private boolean canReadImages() {
+        if (Build.VERSION.SDK_INT < 23) return true;
+        for (String permission : readImagesPermissions()) {
+            if (checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED) return true;
+        }
+        return false;
     }
 
     /** Asks for read access to pictures first if it is not there yet. */
     private void pickFromMediaStore() {
-        if (Build.VERSION.SDK_INT >= 23
-                && checkSelfPermission(readImagesPermission()) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{readImagesPermission()}, REQUEST_READ_IMAGES);
+        if (Build.VERSION.SDK_INT >= 23 && !canReadImages()) {
+            requestPermissions(readImagesPermissions(), REQUEST_READ_IMAGES);
             return;
         }
         loadMediaStore();
@@ -390,7 +403,7 @@ public final class SettingsActivity extends Activity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
         if (requestCode != REQUEST_READ_IMAGES) return;
-        if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+        if (canReadImages()) {
             loadMediaStore();
         } else {
             // Without access the shared folder is still there.

@@ -54,10 +54,12 @@
     <!-- Settings. Titles and states must fit on one line of the side panel. -->
     <string name="settings">Launcher settings</string>
     <string name="settings_page">Settings</string>
-    <string name="inputs_title">TV inputs</string>
+    <string name="inputs_title">Signal sources</string>
     <string name="inputs_unavailable">This TV does not provide its inputs to apps</string>
-    <string name="input_selected">Connected</string>
-    <string name="input_source">Input</string>
+    <string name="input_title_tuner">TV</string>
+    <string name="input_state_active">Signal</string>
+    <string name="input_state_idle">No signal</string>
+    <string name="input_state_unplugged">Not connected</string>
     <string name="input_tile_description">Switch to %1$s</string>
     <string name="input_switch_failed">The TV could not open this input</string>
     <string name="default_title">Default launcher</string>

@@ -7,6 +7,14 @@
             <stroke android:width="2dp" android:color="#FFFFFFFF" />
         </shape>
     </item>
+    <!-- Signal on this input: a soft green rim, so it stands out without the focus. -->
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="17dp" />
+            <solid android:color="#B82B3A34" />
+            <stroke android:width="2dp" android:color="#CC6FCF7A" />
+        </shape>
+    </item>
     <item>
         <shape android:shape="rectangle">
             <corners android:radius="17dp" />

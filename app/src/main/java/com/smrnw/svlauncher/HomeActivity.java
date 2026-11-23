@@ -37,6 +37,7 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
 
@@ -85,6 +86,8 @@ public final class HomeActivity extends Activity implements
     private LinearLayout favoritesRow;
     private View favoritesEmpty;
     private HorizontalScrollView favoritesScroll;
+    private View inputsButton;
+    private View settingsButton;
     private GridView grid;
     private TextView statsView;
     private SystemStats stats;
@@ -221,7 +224,9 @@ public final class HomeActivity extends Activity implements
 
         findViewById(R.id.settings).setOnClickListener(
                 v -> startActivity(new Intent(this, SettingsActivity.class)));
-        findViewById(R.id.input_sources).setOnClickListener(v -> showInputSources());
+        inputsButton = findViewById(R.id.input_sources);
+        settingsButton = findViewById(R.id.settings);
+        inputsButton.setOnClickListener(v -> showInputSources());
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_PACKAGE_ADDED);
@@ -254,6 +259,7 @@ public final class HomeActivity extends Activity implements
             readPrefs();
             rebuild(null);
         }
+        updateTopButtons();
         applyStats();
         Wallpapers.listener = wallpapersChanged;
         // A different wallpaper every time the home screen opens, then on a timer.
@@ -348,11 +354,17 @@ public final class HomeActivity extends Activity implements
             wallpaper.clear();
             wallpaperPath = null;
         }
-        if (level >= TRIM_MEMORY_BACKGROUND
-                || (level >= TRIM_MEMORY_RUNNING_LOW && level < TRIM_MEMORY_UI_HIDDEN)) {
+        if (level >= TRIM_MEMORY_BACKGROUND) {
+            // Hidden in the background: the cards on screen go too and are drawn
+            // again in onStart.
             clearCardViews();
             cards.evictAll();
             cardsDropped = true;
+        } else if (level >= TRIM_MEMORY_RUNNING_LOW && level < TRIM_MEMORY_UI_HIDDEN) {
+            // Still on screen: blanking the visible cards would leave empty tiles
+            // until the user leaves and comes back. Only the cache is dropped; the
+            // cards on screen keep their bitmaps, off-screen ones are rendered again.
+            cards.evictAll();
         }
     }
 
@@ -528,6 +540,7 @@ public final class HomeActivity extends Activity implements
             favoritesRow.addView(item, params);
         }
         favoritesScroll.post(this::loadVisibleFavoriteCards);
+        if (inputsButton != null) updateTopButtons();
     }
 
     /** Decode only favorite cards that can currently be seen on screen. */
@@ -613,11 +626,15 @@ public final class HomeActivity extends Activity implements
         return false;
     }
 
-    /** Opens the sources registered by this TV as a translucent horizontal tile row. */
-    private void showInputSources() {
-        TvInputManager manager = (TvInputManager) getSystemService(Context.TV_INPUT_SERVICE);
+    /**
+     * The TV's own physical inputs (tuner, HDMI, AV, ...), sorted the way their
+     * ports are numbered and without duplicates. Empty on boxes without inputs.
+     */
+    private ArrayList<TvInputInfo> physicalInputs() {
         ArrayList<TvInputInfo> inputs = new ArrayList<>();
-        if (manager != null) {
+        TvInputManager manager = tvInputs();
+        if (manager == null) return inputs;
+        try {
             for (TvInputInfo input : manager.getTvInputList()) {
                 android.content.pm.ServiceInfo service = input.getServiceInfo();
                 if (service == null || service.applicationInfo == null) continue;
@@ -628,22 +645,44 @@ public final class HomeActivity extends Activity implements
                         || input.getType() == TvInputInfo.TYPE_TUNER;
                 // Apps can register TV channels too. Only built-in TV services own
                 // the physical ports that belong in this source picker.
-                if (systemInput && physicalInput) inputs.add(input);
+                // A CEC device input hangs off its port: the port shows its name instead.
+                boolean device = input.getParentId() != null;
+                if (systemInput && physicalInput && !device) inputs.add(input);
             }
+        } catch (RuntimeException e) {
+            return new ArrayList<>(); // the TV service went away mid-call
         }
         // Input state is not reliable on every TV firmware. Keep this list neutral
         // instead of presenting the last opened source as a physical connection.
-        Collections.sort(inputs, (a, b) -> {
-            int order = Integer.compare(inputOrder(a), inputOrder(b));
-            return order != 0 ? order : a.getId().compareTo(b.getId());
+        Collections.sort(inputs, (x, y) -> {
+            int order = Integer.compare(inputOrder(x), inputOrder(y));
+            return order != 0 ? order : x.getId().compareTo(y.getId());
         });
         HashSet<String> seenLabels = new HashSet<>();
-        ArrayList<TvInputInfo> uniqueInputs = new ArrayList<>(inputs.size());
+        ArrayList<TvInputInfo> unique = new ArrayList<>(inputs.size());
         for (TvInputInfo input : inputs) {
             String label = input.loadLabel(this).toString().trim().toLowerCase(Locale.ROOT);
-            if (seenLabels.add(label)) uniqueInputs.add(input);
+            if (seenLabels.add(label)) unique.add(input);
         }
-        inputs = uniqueInputs;
+        return unique;
+    }
+
+    /**
+     * Shows the inputs button only on TVs that have inputs, and keeps the focus
+     * route sane: from the grid's top row up goes to the favorites when there are
+     * any, otherwise straight to the buttons at the top.
+     */
+    private void updateTopButtons() {
+        boolean any = !physicalInputs().isEmpty();
+        inputsButton.setVisibility(any ? View.VISIBLE : View.GONE);
+        settingsButton.setNextFocusLeftId(any ? R.id.input_sources : View.NO_ID);
+        grid.setNextFocusUpId(!favorites.isEmpty() ? View.NO_ID
+                : any ? R.id.input_sources : R.id.settings);
+    }
+
+    /** Opens the sources registered by this TV as a translucent horizontal tile row. */
+    private void showInputSources() {
+        ArrayList<TvInputInfo> inputs = physicalInputs();
         if (inputs.isEmpty()) {
             Toast.makeText(this, R.string.inputs_unavailable, Toast.LENGTH_LONG).show();
             return;
@@ -653,40 +692,45 @@ public final class HomeActivity extends Activity implements
         View appsContent = findViewById(R.id.apps_content);
         LinearLayout tiles = panel.findViewById(R.id.input_tiles);
         final AlertDialog[] dialogRef = new AlertDialog[1];
+        final TvInputManager manager = tvInputs();
+        final HashMap<String, View> tileById = new HashMap<>();
         for (TvInputInfo input : inputs) {
             View tile = getLayoutInflater().inflate(R.layout.input_tile, tiles, false);
-            ImageView icon = tile.findViewById(R.id.input_icon);
-            TextView label = tile.findViewById(R.id.input_label);
-            TextView state = tile.findViewById(R.id.input_state);
-            CharSequence title = input.loadLabel(this);
-            label.setText(title);
-            state.setText(R.string.input_source);
-            try {
-                String sourceName = title.toString().toLowerCase(Locale.ROOT);
-                int connectorIcon = sourceName.contains("hdmi") ? R.drawable.ic_hdmi_source
-                        : (sourceName.contains("displayport") || sourceName.matches("dp\\s*\\d*"))
-                        ? R.drawable.ic_displayport_source : 0;
-                android.graphics.drawable.Drawable inputIcon = connectorIcon == 0
-                        ? input.loadIcon(this) : null;
-                if (connectorIcon != 0) icon.setImageResource(connectorIcon);
-                if (inputIcon != null) icon.setImageDrawable(inputIcon);
-                else if (connectorIcon == 0) icon.setImageResource(input.isPassthroughInput()
-                            ? R.drawable.ic_input_source : R.drawable.ic_tv_source);
-            } catch (RuntimeException ignored) {
-                icon.setImageResource(input.isPassthroughInput()
-                        ? R.drawable.ic_input_source : R.drawable.ic_tv_source);
-            }
-            tile.setContentDescription(getString(R.string.input_tile_description, title));
+            ((ImageView) tile.findViewById(R.id.input_icon)).setImageResource(inputIcon(input));
+            ((TextView) tile.findViewById(R.id.input_label)).setText(inputTitle(input));
+            // The second line is only for a device that named itself over HDMI-CEC.
+            TextView device = tile.findViewById(R.id.input_detail);
+            CharSequence deviceName = cecDeviceName(input);
+            device.setText(deviceName);
+            device.setVisibility(deviceName != null ? View.VISIBLE : View.GONE);
+            bindInputState(tile, input, manager);
+            tile.setContentDescription(getString(R.string.input_tile_description, inputTitle(input)));
             tile.setOnClickListener(v -> {
                 if (dialogRef[0] != null) dialogRef[0].dismiss();
                 switchInput(input);
             });
             tiles.addView(tile);
+            tileById.put(input.getId(), tile);
         }
+        // A device switched on or off while the panel is open shows up right away.
+        final TvInputManager.TvInputCallback stateWatcher = manager == null ? null
+                : new TvInputManager.TvInputCallback() {
+            @Override
+            public void onInputStateChanged(String inputId, int state) {
+                for (TvInputInfo input : inputs) {
+                    View tile = tileById.get(input.getId());
+                    if (tile != null) bindInputState(tile, input, manager);
+                }
+            }
+        };
+        if (stateWatcher != null) manager.registerCallback(stateWatcher, Worker.MAIN);
 
         AlertDialog dialog = new AlertDialog.Builder(this).setView(panel).create();
         dialogRef[0] = dialog;
-        dialog.setOnDismissListener(d -> appsContent.setVisibility(View.VISIBLE));
+        dialog.setOnDismissListener(d -> {
+            appsContent.setVisibility(View.VISIBLE);
+            if (stateWatcher != null) manager.unregisterCallback(stateWatcher);
+        });
         dialog.setOnShowListener(d -> {
             Window window = dialog.getWindow();
             if (window != null) {
@@ -705,22 +749,154 @@ public final class HomeActivity extends Activity implements
         dialog.show();
     }
 
+    private TvInputManager tvInputs() {
+        try {
+            return (TvInputManager) getSystemService(Context.TV_INPUT_SERVICE);
+        } catch (RuntimeException e) {
+            return null; // no TV input framework on this device
+        }
+    }
+
+    /** The connector the input really has, judged by its type first and its name second. */
+    private int inputIcon(TvInputInfo input) {
+        switch (inputKind(input)) {
+            case TvInputInfo.TYPE_TUNER: return R.drawable.ic_tv_source;
+            case TvInputInfo.TYPE_HDMI: return R.drawable.ic_hdmi_source;
+            case TvInputInfo.TYPE_DISPLAY_PORT: return R.drawable.ic_displayport_source;
+            case TvInputInfo.TYPE_COMPOSITE: return R.drawable.ic_av_source;
+            case TvInputInfo.TYPE_COMPONENT: return R.drawable.ic_component_source;
+            case TvInputInfo.TYPE_VGA: return R.drawable.ic_vga_source;
+            case TvInputInfo.TYPE_DVI: return R.drawable.ic_dvi_source;
+            case TvInputInfo.TYPE_SVIDEO: return R.drawable.ic_svideo_source;
+            default: return R.drawable.ic_input_source;
+        }
+    }
+
+    /**
+     * Firmware often reports a generic type ("other") or misnames ports, so the
+     * name is checked too: "HDMI 2" is an HDMI port whatever the type says.
+     */
+    private int inputKind(TvInputInfo input) {
+        String name = input.loadLabel(this).toString().toLowerCase(Locale.ROOT);
+        if (name.contains("hdmi")) return TvInputInfo.TYPE_HDMI;
+        if (name.contains("displayport") || name.matches("dp\\s*\\d*")) return TvInputInfo.TYPE_DISPLAY_PORT;
+        if (name.contains("vga") || name.equals("pc")) return TvInputInfo.TYPE_VGA;
+        if (name.contains("dvi")) return TvInputInfo.TYPE_DVI;
+        if (name.contains("ypbpr") || name.contains("component") || name.contains("компонент")) {
+            return TvInputInfo.TYPE_COMPONENT;
+        }
+        if (name.contains("s-video") || name.contains("svideo")) return TvInputInfo.TYPE_SVIDEO;
+        if (name.equals("av") || name.startsWith("av ") || name.contains("composite")
+                || name.contains("композит")) {
+            return TvInputInfo.TYPE_COMPOSITE;
+        }
+        if (name.contains("tuner") || name.contains("тюнер") || name.equals("tv")) return TvInputInfo.TYPE_TUNER;
+        return input.getType();
+    }
+
+    /** Port number from a name like "HDMI 2" or "HDMI2"; 0 if there is none. */
+    private static int portNumber(String name) {
+        int port = 0;
+        boolean digits = false;
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if (c >= '0' && c <= '9') {
+                port = port * 10 + c - '0';
+                digits = true;
+            } else if (digits) {
+                break;
+            }
+        }
+        return port;
+    }
+
+    /**
+     * The big name: what the user called the input in system settings if they did,
+     * otherwise the port the way it is printed on the TV.
+     */
+    private CharSequence inputTitle(TvInputInfo input) {
+        if (Build.VERSION.SDK_INT >= 24) {
+            CharSequence custom = input.loadCustomLabel(this);
+            if (custom != null && custom.length() > 0
+                    && !custom.toString().equals(input.loadLabel(this).toString())) {
+                return custom;
+            }
+        }
+        int port = portNumber(input.loadLabel(this).toString());
+        switch (inputKind(input)) {
+            case TvInputInfo.TYPE_TUNER: return getText(R.string.input_title_tuner);
+            case TvInputInfo.TYPE_HDMI: return port > 0 ? "HDMI " + port : "HDMI";
+            case TvInputInfo.TYPE_DISPLAY_PORT: return port > 0 ? "DisplayPort " + port : "DisplayPort";
+            case TvInputInfo.TYPE_COMPOSITE: return "AV";
+            case TvInputInfo.TYPE_COMPONENT: return "YPbPr";
+            case TvInputInfo.TYPE_VGA: return "VGA";
+            case TvInputInfo.TYPE_DVI: return "DVI";
+            case TvInputInfo.TYPE_SVIDEO: return "S-Video";
+            default: return input.loadLabel(this);
+        }
+    }
+
+    /**
+     * A device that introduced itself over HDMI-CEC gets an input of its own whose
+     * parent is the port: its name ("PlayStation 4") is the best label there is.
+     */
+    private CharSequence cecDeviceName(TvInputInfo port) {
+        TvInputManager manager = tvInputs();
+        if (manager == null) return null;
+        try {
+            for (TvInputInfo child : manager.getTvInputList()) {
+                if (port.getId().equals(child.getParentId())) return child.loadLabel(this);
+            }
+        } catch (RuntimeException ignored) {
+            // Nothing to name then.
+        }
+        return null;
+    }
+
+    /**
+     * Lights up the input that receives a signal right now. Only a positive report
+     * counts: firmware tends to report "standby" for empty ports and for ports with
+     * a device switched off alike, so that state is shown as plain "no signal".
+     * The tuner is always "connected" as far as the TV knows, so it is never lit.
+     */
+    private void bindInputState(View tile, TvInputInfo input, TvInputManager manager) {
+        TextView state = tile.findViewById(R.id.input_state);
+        int value = TvInputManager.INPUT_STATE_CONNECTED_STANDBY;
+        try {
+            if (manager != null) value = manager.getInputState(input.getId());
+        } catch (RuntimeException ignored) {
+            // Unknown: treated as "no signal".
+        }
+        boolean tuner = inputKind(input) == TvInputInfo.TYPE_TUNER;
+        boolean active = !tuner && (value == TvInputManager.INPUT_STATE_CONNECTED
+                || cecDeviceName(input) != null);
+        boolean unplugged = !tuner && value == TvInputManager.INPUT_STATE_DISCONNECTED;
+        tile.setSelected(active);
+        tile.setAlpha(unplugged ? 0.55f : 1f);
+        state.setSelected(active);
+        if (tuner) {
+            state.setVisibility(View.GONE);
+        } else {
+            state.setVisibility(View.VISIBLE);
+            state.setText(active ? R.string.input_state_active
+                    : unplugged ? R.string.input_state_unplugged : R.string.input_state_idle);
+        }
+    }
+
     /** Keep source tiles in a familiar order instead of relying on vendor list order. */
     private int inputOrder(TvInputInfo input) {
-        String label = input.loadLabel(this).toString().toLowerCase(Locale.ROOT);
-        if (label.contains("tuner") || label.contains("тюнер") || label.equals("tv")) return 0;
-        if (label.contains("hdmi")) {
-            int port = 0;
-            for (int i = label.indexOf("hdmi") + 4; i < label.length(); i++) {
-                char c = label.charAt(i);
-                if (c >= '0' && c <= '9') port = port * 10 + c - '0';
-                else if (port > 0) break;
-            }
-            return 10 + port;
+        int port = portNumber(input.loadLabel(this).toString());
+        switch (inputKind(input)) {
+            case TvInputInfo.TYPE_TUNER: return 0;
+            case TvInputInfo.TYPE_HDMI: return 100 + port;
+            case TvInputInfo.TYPE_DISPLAY_PORT: return 200 + port;
+            case TvInputInfo.TYPE_DVI: return 300 + port;
+            case TvInputInfo.TYPE_VGA: return 400 + port;
+            case TvInputInfo.TYPE_COMPONENT: return 500 + port;
+            case TvInputInfo.TYPE_COMPOSITE: return 600 + port;
+            case TvInputInfo.TYPE_SVIDEO: return 700 + port;
+            default: return 900;
         }
-        if (label.contains("displayport") || label.equals("dp")) return 30;
-        if (label.equals("av") || label.startsWith("av ") || label.contains("composite")) return 40;
-        return 50;
     }
 
     /** Lets the system TV app open the passthrough source, such as HDMI. */
