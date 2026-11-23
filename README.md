@@ -25,13 +25,13 @@
 
 Проект новый и активно дорабатывается: поведение, внешний вид и состав функций будут меняться от версии к версии.
 
-![Домашний экран](docs/screenshots/home.png)
+![Домашний экран](docs/screenshots/home.jpg)
 
-![Источники сигнала](docs/screenshots/input-picker.jpg)
+![Источники сигнала](docs/screenshots/signal-sources.jpg)
 
 | Настройки | Начальная настройка |
 | --- | --- |
-| ![Настройки лаунчера](docs/screenshots/settings.png) | ![Мастер первого запуска](docs/screenshots/setup.png) |
+| ![Настройки лаунчера](docs/screenshots/settings.jpg) | ![Мастер первого запуска](docs/screenshots/setup.jpg) |
 
 Скриншоты сняты на телевизоре Xiaomi Mi TV (Android TV 11, 1280×720).
 
